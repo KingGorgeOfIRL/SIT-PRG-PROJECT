@@ -1,0 +1,1102 @@
+Delivered-To: asherlee.bxl@gmail.com
+Received: by 2002:a17:504:fd:b0:1dd5:8b0d:e784 with SMTP id n29csp1674053njm;
+        Fri, 9 Jan 2026 07:10:34 -0800 (PST)
+X-Google-Smtp-Source: AGHT+IHZb98XLlRj2K38n6qhn6pQHypKAQFcy536u3wp/h5pk5qC7pEYvSdx3mSLL1nvNzM9j2nj
+X-Received: by 2002:a05:622a:17cf:b0:4ff:b1fc:99be with SMTP id d75a77b69052e-4ffb4ab73b8mr136214291cf.73.1767971434158;
+        Fri, 09 Jan 2026 07:10:34 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1767971434; cv=none;
+        d=google.com; s=arc-20240605;
+        b=RxgSSKPRpwuBiao7AC796V/HXG3YGiwmpR31WTC+rla/1VY3GQYq5C2xhvVaMY3tas
+         WaPBw2hOATqNOcizpDviD9UA/n4C0mPJSXYSgW7rvtNT+x516ytq317EaALPuTW0MQbB
+         6O46LMXLK34us7mZcZD6tBw7mkzMWoLsiU0/q+X0h9CFl0Aq1+EIjIDI34TfbKWjpKmY
+         K0YhDArRAjgBAW4Q/hue0UxptpS3gApudc1JorcGK38P5w5rNDJ8VrfR09PhomIX9JuQ
+         R6tv6+8uKTYEIZix9/iwDVpLRL9mNF4OAUtGASVi8CMfTYFB1szVkPQThnc9T0W1cFy2
+         Okow==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=content-transfer-encoding:message-id:list-unsubscribe
+         :list-unsubscribe-post:reply-to:to:from:subject:mime-version:date
+         :dkim-signature:dkim-signature;
+        bh=SWOEbm4YT9Zx+4NnxnyLP1n6sthZLRcmhOO1x8A2etQ=;
+        fh=7rjiyb/OAmRZdUkkdHpSuvohcP3jKvLQ1/5amVkEStI=;
+        b=dSOtUTddCfNQ8gl9svjGc9CV4elzqbDkVTv1fckwEfd2WVMG5owtLr21025m/74LCt
+         boWaP81J+50wmwgH29y1iAVnMoYIL03TWpTAYa6buKnYEXCUWbKd0c9x5KHTyLdgMjQl
+         w/52ZmBqKKR71ifnciyRcSwZT4DQ7N4WmUSGNXPz1C66HS2NL4gdO39OgkWKc7HpZxC3
+         QhQQSj1fB4EIUNNBDFR3V16ZRpF2H6logvjGy9YEURR7CKCXnFlG9ZABOcOkgeZLj0+7
+         7fJXYlYhI3xVHbWzVFfH7DtCyiHvHZ//EGL5dHTfsPM5gMeJjk14jfCoRfDw/YjXnntB
+         txaw==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@mailgun.patreon.com header.s=krs header.b=hHNYILY+;
+       dkim=pass header.i=@mailgun.org header.s=mg header.b=G2XcmUGo;
+       spf=pass (google.com: domain of bounce+1e402a.e05498-asherlee.bxl=gmail.com@mailgun.patreon.com designates 143.55.229.101 as permitted sender) smtp.mailfrom="bounce+1e402a.e05498-asherlee.bxl=gmail.com@mailgun.patreon.com";
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=patreon.com
+Return-Path: <bounce+1e402a.e05498-asherlee.bxl=gmail.com@mailgun.patreon.com>
+Received: from a229-101.mailgun.net (a229-101.mailgun.net. [143.55.229.101])
+        by mx.google.com with UTF8SMTPS id d75a77b69052e-4ffa8e8a022si114650821cf.219.2026.01.09.07.10.33
+        for <asherlee.bxl@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Fri, 09 Jan 2026 07:10:34 -0800 (PST)
+Received-SPF: pass (google.com: domain of bounce+1e402a.e05498-asherlee.bxl=gmail.com@mailgun.patreon.com designates 143.55.229.101 as permitted sender) client-ip=143.55.229.101;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@mailgun.patreon.com header.s=krs header.b=hHNYILY+;
+       dkim=pass header.i=@mailgun.org header.s=mg header.b=G2XcmUGo;
+       spf=pass (google.com: domain of bounce+1e402a.e05498-asherlee.bxl=gmail.com@mailgun.patreon.com designates 143.55.229.101 as permitted sender) smtp.mailfrom="bounce+1e402a.e05498-asherlee.bxl=gmail.com@mailgun.patreon.com";
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=patreon.com
+DKIM-Signature: a=rsa-sha256; v=1; c=relaxed/relaxed; d=mailgun.patreon.com; q=dns/txt; s=krs; t=1767971433; x=1767978633;
+ h=Content-Transfer-Encoding: Content-Type: Message-Id: List-Unsubscribe: List-Unsubscribe-Post: Reply-To: To: To: From: From: Subject: Subject: Mime-Version: Date: X-Feedback-Id: Sender;
+ bh=SWOEbm4YT9Zx+4NnxnyLP1n6sthZLRcmhOO1x8A2etQ=;
+ b=hHNYILY+t9be4VP7WWyElOMcsbON+V762kIXb/95v/RCW/fc9ZsPRTT7Dd0/oDJyoulwAk3lj2mdVOTW/Z4/WCpedl6b0kyJWLVQqrBBZom8IHh091r6ePue4Alarg9EMalHh8/c/LJQVqQFeaJLiJkTE9MH7QJLKo5NFSecxhs=
+DKIM-Signature: a=rsa-sha256; v=1; c=relaxed/relaxed; d=mailgun.org; q=dns/txt; s=mg; t=1767971433; x=1767978633;
+ h=Content-Transfer-Encoding: Content-Type: Message-Id: List-Unsubscribe: List-Unsubscribe-Post: Reply-To: To: To: From: From: Subject: Subject: Mime-Version: Date: X-Feedback-Id: Sender;
+ bh=SWOEbm4YT9Zx+4NnxnyLP1n6sthZLRcmhOO1x8A2etQ=;
+ b=G2XcmUGoAvF+Q8dWOUpGZWpZfj9yIOktUiQeQMCT2ApzyoHf8kLOo9vnLOUQiGq1aSVp1TJ2gKNA7tVjbDqH2ryNfKGI+3Z8r5xVxpVTXnm/I9YuJJ7EyZJtIzX7aegg42rZ7ShX07cLHYVDNOYmXLEJCcEO95JNO1DaGm1YuUM=
+X-Mailgun-Sid: WyJhYjAwNyIsImFzaGVybGVlLmJ4bEBnbWFpbC5jb20iLCJlMDU0OTgiXQ==
+X-Feedback-Id: postmaster@mailgun.patreon.com:template_newsletterpost:5b8f05ca4f41fe0001aec40e:mailgun
+Received: by fb9210db20212ce67ba9ed0b29e5eac7f9d4a88a16c64e6f3075e140fc172f41 with HTTP
+ id 69611a699faf308abf7bfd48; Fri, 09 Jan 2026 15:10:33 GMT
+X-Mailgun-Sending-Ip: 143.55.229.101
+Date: Fri, 09 Jan 2026 15:10:33 +0000
+Mime-Version: 1.0
+Subject: Sky Pride Vol. 5 Chapter 25- The Simian Complaint
+From: Warby Picus <bingo@patreon.com>
+To: asherlee.bxl@gmail.com
+X-Mailgun-Tag: template_newsletterpost
+X-Mailgun-Rewrite-Sender-Header: false
+X-Mailgun-Track-Clicks: false
+X-Mailgun-Track-Opens: true
+Reply-To: no-reply@mailgun.patreon.com
+X-Patreon-Uuid: cb41e797-088d-4640-a908-b24a2e2a1393
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+List-Unsubscribe: <https://webhooks.patreon.com/email-unsubscribe?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGQiOiJaMEZCUVVGQlFuQlpVbkJ3YURKbVVsOUtNVWgyTkY5RFZteEZhRWR0U1VobVQwSjJOVFpxWVU5c0xVbHZWakpwVUZwbVdrbFBVMWt0VUdseGVHOWxTazgwYlhOM2EzRmFSa1psUTNkM2VtNHRaRWhIT1hrelJ6Vm9Ta00zV1VSc1JtTTBVazgwU1hWdWRWRnRlbmhvVkhOSVV6YzRhMVJLU25oc05YSXpRbkV4TFdWWmMzSmpZak5MVFhodFkyOHhWa2xsUW1kYU1YWmhhMFZJYkZGYVJXUktSak5rUjJ4MVNISjZSRk5rWWxoWk9XcDJTRUpGUTFGUFRGTjFNWGR0ZW10WU5WSkdZWFpNWkZCVmNqRXpUMEpYY0U1Nk5DMU5jMU50TmtWdmJURm1UMVI0ZEhFdFNtdFlUVEV6Y0VFdGVEbHFTMDVMWm1aMFlYUlplbGRMTTBsaVJIRmhMV3BNY1haTmMzTlJWbWRuZG5kMU9VSnZXbVJzYkd0aVJESnJWVEpDUmtwS1VFUmtaVFI2TmtOMmNFMVJNVnBTY0U1aVJEbEhkRkJMVW1wbGJEZGZWbGczVTJoemNWSlpiWEZxV25GRVltVTJkRFF0ZFV0MGJsSkJlSFIyV0RZeVZrWmFTbWswYUZnMU5qaHdORWh2TlhSS04ya3pRV1kzU2tWdFpYaDNhR1F5TlZSMFpVRlNVRFJ2WW1Ob00ybEdRMXBEYm5rMWJHOVVPRXQwWjJkRFVVaDJkR2hZWjJkSU1uQXpXamRFYVZsRk9VaHZlbWRpV1ZGWWVsVTRhalJ1V210RFpqQmtiME4wTTJOVU9FTkJiM0JCVTJJNGRucDBWMDFtUTNGU2VuVnhiSGRwU1RaWGEzbDZVVWxOWHpkalZGRTkifQ.QLi-dtYNBWQq5tJRS3D2hQhzW4mK3IZyHHUXubV3B9A>
+X-Mailgun-Variables: {"bulk_mode": "0", "campaign_id": "9991269", "custom_nonce":
+ "NewsletterPost:147778429:2026-01-09 15:00:20", "domain_override":
+ "mailgun.patreon.com", "email_campaign_name": "transactional", "email_id":
+ "2e53c470-d27d-40ae-b471-0012c0445e18", "email_notif_campaign_id": "9991269",
+ "email_notif_type": "campaign_email_post", "email_priority": "low_priority",
+ "email_system": "email-service-nunjucks", "extra_logging_props":
+ "{\"entity_id\":null,\"primary_entity\":{\"entity_id\":147778429,\"entity_type\":\"post\"},\"secondary_entities\":null,\"sender\":{\"sender_id\":9991269,\"sender_type\":\"campaign\"},\"campaign_id\":\"9991269\",\"notification_name\":\"NewPost\",\"fanout_id\":\"019ba346-a9d8-7913-8b17-895676ed351d\"}",
+ "intent_type": "NewsletterPost", "is_high_priority": "0", "notification_id":
+ "2e53c470-d27d-40ae-b471-0012c0445e18", "notification_priority": "standard",
+ "patreon_service_name": "notif-platform", "post_id": "147778429",
+ "post_type": "text_only", "rate_limits": "[]", "recipient_size_bucket": "1",
+ "should_channel_throttle": "0", "should_ml_throttle": "0", "task_id":
+ "cb41e797-088d-4640-a908-b24a2e2a1393", "template_name": "newsletterpost",
+ "timing":
+ "{\"client_start_time\":\"2026-01-09T15:00:20.067513\",\"notification_platform_entrypoint\":\"send_fanout_notifications\",\"notification_platform_received_time\":\"2026-01-09T15:01:15.864815\",\"filter_recipient_list_start_time\":\"2026-01-09T15:06:42.424562\",\"filter_recipient_list_end_time\":\"2026-01-09T15:06:44.310739\",\"notification_generation_start_time\":\"2026-01-09T15:06:44.310754\",\"notification_generation_end_time\":\"2026-01-09T15:06:54.889929\",\"channel_start_time\":\"2026-01-09T15:10:31.050245\",\"channel_provider_received_time\":\"2026-01-09T15:10:33.105871\",\"channel_delivered_time\":null}",
+ "user_id": "7284389"}
+Message-Id: <20260109151033.237e5d33d776dd4e@mailgun.patreon.com>
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html><html lang=3D"en" xmlns=3D"http://www.w3.org/1999/xhtml" xml=
+ns:v=3D"urn:schemas-microsoft-com:vml" xmlns:o=3D"urn:schemas-microsoft-com=
+:office:office" dir=3D"ltr"><head>
+<title>Sky Pride Vol. 5 Chapter 25- The Simian Complaint</title>
+<!--[if !mso]><meta http-equiv=3D"X-UA-Compatible" content=3D"IE=3Dedge" />=
+<!--<![endif]-->
+<meta name=3D"format-detection" content=3D"telephone=3Dno">
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3DUTF-8">
+<meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=3D1"=
+>
+<style type=3D"text/css">
+#outlook a{padding: 0;}
+=2EReadMsgBody{width: 100%;}
+=2EExternalClass{width: 100%;}
+=2EExternalClass *{line-height: 100%;}
+body{margin: 0; padding: 0; -webkit-text-size-adjust: 100%; -ms-text-size-a=
+djust: 100%;}
+table, td{border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspac=
+e: 0pt;}
+img{border: 0; height: auto; line-height: 100%; outline: none; text-decorat=
+ion: none; -ms-interpolation-mode: bicubic;}
+p{display: block; margin: 13px 0;}
+</style>
+<!--[if mso]>
+<xml>
+<o:OfficeDocumentSettings>
+<o:AllowPNG/>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+<![endif]-->
+<!--[if lte mso 11]>
+<style type=3D"text/css">
+=2Eoutlook-group-fix{width:100% !important;}
+</style>
+<![endif]-->
+<style type=3D"text/css">=20
+@media only screen and (max-width: 480px) {
+=2Edys-desktop { display: none !important; }
+div.dys-mobile { display: block !important; }
+tr.dys-mobile { display: table-row !important; }=20
+}
+</style>
+ <style type=3D"text/css">
+@media only screen and (min-width:480px) {
+=2Edys-column-per-100 {
+width: 100.000000% !important;
+max-width: 100.000000%;
+}
+=2Edys-column-per-50 {
+width: 50.000000% !important;
+max-width: 50.000000%;
+}
+}
+</style>
+<style type=3D"text/css">
+@media only screen and (max-width:480px) {
+ table.full-width-mobile { width: 100% !important; }
+td.full-width-mobile { width: auto !important; }
+}
+u + #body a {color: #000000;text-decoration: underline;font-size: inherit; =
+font-family: inherit; font-weight: inherit; line-height: inherit; }
+ a {color: #000000;text-decoration: underline;}
+ strong {
+ font-weight:600 !important;
+ }
+ b {
+ font-weight:600 !important;
+ }
+=20
+ /* inline image width */
+ td.post-content img {
+ max-width:592px;=20
+ }
+ /* list indentation */
+ td.post-content div ol {
+ margin-left: 5px !important;
+ padding-left: 16px !important;
+ }
+ td.post-content div ul {
+ margin-left:5px !important;
+ padding-left:16px !important;
+ }
+=20
+ /* set 20px between paragraphs */
+ td.post-content div p {
+ margin: 20px 0 !important;
+ mso-margin-top-alt: 20px !important;
+ mso-margin-bottom-alt: 20px !important;=20
+ }
+ /* set 10px between list items */
+ td.post-content div ul li,
+ td.post-content div ol li {
+ margin: 0 0 10px 0 !important;=20
+ }
+ /* set 10px between list items */
+ td.post-content li p {
+ margin: 0 0 10px 0 !important;
+ mso-margin-bottom-alt: 10px !important;
+ }
+ td.post-content li {
+ margin: 0 !important;
+ }
+ /* remove extra spacing after the last item in each list */
+ td.post-content div ul li:last-child,
+ td.post-content div ol li:last-child {
+ margin-bottom: 0 !important;
+ }
+ blockquote {
+ border-left:2px solid #070707 !important;
+ margin: 0; padding: 0;
+ padding-left:20px !important;
+ }
+ li p {
+ margin: 12px 0 !important;
+ }
+ @media only screen and (max-width:480px) {
+ td.post-content div p {
+ margin:18px 0 !important;
+ }
+ h1 {
+ font-size: 30px !important;
+ font-weight: 600 !important;
+ line-height:36px !important;
+ }
+ h3 {
+ font-size: 20px !important;
+ font-weight: 600 !important;
+ line-height: 26px !important;=20
+ }
+ h4 {
+ font-size:16px !important;
+ font-weight:600;
+ line-height: 21px !important;
+ }
+ }
+ @media only screen and (max-width: 480px) {
+ .pd-btm {
+ padding-bottom:12px !important;
+ }
+ .mb-pd-wrp > table > tbody > tr > td {
+ padding: 12px 14px !important;
+ }=20
+ .row-mb-pd > table > tbody > tr > td {
+ padding-left:4px !important;
+ padding-right:4px !important;
+ }
+ .stack-mb {
+ display:block !important;
+ }
+ .stack-mb-btn > table {
+ margin-top:16px !important;
+ }
+ }
+ @media only screen and (min-width:480px) {
+ .body-pd {
+ padding:20px 0 !important;
+ }
+ .row-mb-pd > table > tbody > tr > td {
+ padding-left:4px !important;
+ padding-right:4px !important;
+ }
+ }
+ .title-2lines{
+ display:-webkit-box;
+ -webkit-box-orient:vertical;
+ -webkit-line-clamp:2;
+ overflow:hidden;
+ text-overflow:ellipsis;
+ max-height:41.6px;
+ line-height:20.8px;
+ }
+=20
+ .cr-img img {width:42px !important;}
+ @media only screen and (max-width:440px) {
+ .title-mb-sz-26 > h2 {
+ font-size:30px !important;
+ line-height:36px !important;
+ }
+ }
+=20
+ @media only screen and (max-width:440px) {
+ .text-mb-sz-16 > div {
+ font-size:16px !important;
+ line-height:26px !important;
+ }
+ td.post-content li { margin: 0 !important; padding: 0 !important; }
+ /* 10px between paragraphs INSIDE list items (wins over the 16px rule abov=
+e) */
+ td.post-content li p,
+ .text-mb-sz-16 li p {
+ margin: 0 0 10px 0 !important;
+ mso-margin-bottom-alt: 10px !important;
+ }
+ /* 10px between list items */
+ td.post-content ul li,
+ td.post-content ol li,
+ .text-mb-sz-16 ul li,
+ .text-mb-sz-16 ol li {
+ margin: 0 0 10px 0 !important;
+ }
+ /* trim the extra space after the last item */
+ td.post-content ul li:last-child,
+ td.post-content ol li:last-child {
+ margin-bottom: 0 !important;
+ }
+ }=20
+ td.post-content div p li {
+ margin-left:0 !important;
+ padding-left:0 !important;
+ }
+=20
+ .wrp-radius > table {
+ border:1px solid #e8e8e8 !important;
+ border-collapse:initial !important;
+ border-radius: 12px !important;
+ }
+=20
+ @media only screen and (max-width:480px) {
+ .full-width-mb > table {
+ width:100% !important;
+ }
+ .full-width-mb {
+ padding-left: 0 !important;
+ }
+ .mb-crd-pd > table > tbody > tr > td {
+ padding: 24px 16px !important;
+ }
+ .stack-container-mb > tbody > tr > td {
+ display: block !important;
+ width: 100% !important;
+ box-sizing: border-box !important;
+ }
+ .button-cell-mb {
+ padding-top: 16px !important;
+ padding-left: 0 !important;
+ max-width:100% !important;
+ }
+ }
+=20
+ @media only screen and (max-width: 480px) {
+ .footer-text > div {
+ text-align: left !important;
+ margin-top:16px !important;
+ }
+ .fnt12 > div {
+ font-size:12px !important;
+ }
+ }
+=20
+</style>
+
+
+</head>
+<body id=3D"body" style=3D"background-color: transparent;"><span id=3D"dys-=
+ph" style=3D"width:0;opacity:0;max-height:0;mso-hide:all;overflow:hidden;fl=
+oat:left;display:none !important;">The group quickly made what few defensiv=
+e moves they could. Tian=E2=80=99s first instinct was to pull out some barr=
+icades he had in a ring, but quickly decide...</span><span style=3D"display=
+: none; max-height: 0px; overflow: hidden;">=E2=80=87=CD=8F =E2=80=87=CD=8F=
+ =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=
+=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F=20
+=E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=
+=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=
+=80=87=CD=8F=20
+=E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=
+=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=
+=80=87=CD=8F=20
+=E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=
+=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=
+=80=87=CD=8F=20
+=E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=
+=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=
+=80=87=CD=8F=20
+=E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=
+=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=
+=80=87=CD=8F=20
+=E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=
+=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=
+=80=87=CD=8F=20
+=E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=
+=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=
+=80=87=CD=8F=20
+=E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=
+=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=
+=80=87=CD=8F=20
+=E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=
+=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=80=87=CD=8F =E2=
+=80=87=CD=8F=20
+ =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD=20
+=C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD=20
+=C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD=20
+=C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD=20
+=C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD=20
+=C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD=20
+=C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD=20
+=C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD=20
+=C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD=20
+=C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD =C2=AD=20
+ &nbsp;</span><div style=3D"background-color: transparent;" class=3D"body-p=
+d">
+<!--[if mso | IE]>
+<table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" st=
+yle=3D"width:600px;" width=3D"600"><tr><td style=3D"line-height:0px;font-si=
+ze:0px;mso-line-height-rule:exactly;">
+<![endif]-->
+<div style=3D"margin:0px auto; max-width:600px;">
+<table align=3D"center" role=3D"presentation" border=3D"0" cellpadding=3D"0=
+" cellspacing=3D"0" width=3D"100%"><tbody><tr><td style=3D"padding:12px 0px=
+ 12px 0px;vertical-align:top;">
+
+
+=20
+=20
+ <!--[if mso | IE]>
+<table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" cl=
+ass=3D"mb-pd-title-outlook row-mb-pd-outlook" style=3D"width:600px;" width=
+=3D"600"><tr><td style=3D"line-height:0px;font-size:0px;mso-line-height-rul=
+e:exactly;">
+<![endif]--><div class=3D"mb-pd-title row-mb-pd" style=3D"margin:0px auto;m=
+ax-width:600px;"><table align=3D"center" border=3D"0" cellpadding=3D"0" cel=
+lspacing=3D"0" role=3D"presentation" style=3D"width:100%;"><tbody><tr><td s=
+tyle=3D"direction:ltr;font-size:0px;padding:0px 4px;padding-bottom:16px;pad=
+ding-top:16px;text-align:center;vertical-align:top;"><!--[if mso | IE]>
+<table role=3D"presentation" border=3D"0" cellpadding=3D"0" cellspacing=3D"=
+0"><tr><td style=3D"vertical-align:top;width:592px;">
+<![endif]--><div class=3D"dys-column-per-100 outlook-group-fix" style=3D"di=
+rection:ltr;display:inline-block;font-size:13px;text-align:left;vertical-al=
+ign:top;width:100%;"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0=
+" role=3D"presentation" style=3D"vertical-align:top;" width=3D"100%">
+ <tbody><tr><td align=3D"left" class=3D"title-mb-sz-30" style=3D"font-size:=
+0px;padding:0px 0px 20px;padding-bottom:16px;padding-top:0px;word-break:bre=
+ak-word;"><h2 style=3D"color:#000000;font-family:'SF Pro Display', -apple-s=
+ystem, system-ui, BlinkMacSystemFont, 'Inter', Roboto, Arial, sans-serif, '=
+Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';font-size:32px;font=
+-weight:600;line-height:38px;margin:0;padding:0;text-align:left;text-decora=
+tion:none;"><a href=3D"https://www.patreon.com/posts/sky-pride-vol-5-147778=
+429?utm_campaign=3Dpatron_engagement&amp;utm_source=3Dpost_link&amp;post_id=
+=3D147778429&amp;token=3DeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWRpc19rZ=
+XkiOiJpYTI6YzBjMzllMzMtMDYwNy00ZGJiLWE4OWEtYjJmNDM3MmM0ZGRlIiwicG9zdF9pZCI6=
+MTQ3Nzc4NDI5LCJwYXRyb25faWQiOjcyODQzODl9.nQOoG31ZdNrjWpgK2fXZLjsGrNZH2vYh0Q=
+P2mkSnmGQ&amp;utm_id=3D2e53c470-d27d-40ae-b471-0012c0445e18&amp;utm_medium=
+=3Demail" style=3D"text-decoration:none;color:#000000;"><span style=3D"text=
+-decoration:none;color:#000000;">Sky Pride Vol. 5 Chapter 25- The Simian Co=
+mplaint</span></a></h2></td></tr>
+ <tr><td><div>
+ <div>
+ <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presentati=
+on">
+ <tbody>
+ <tr>
+=20
+ <td class=3D"cr-img" style=3D"max-width:40px;padding-right:12px;" width=3D=
+"40">
+ <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presentati=
+on" style=3D"border-collapse:collapse;border-spacing:0px;"><tbody><tr><td s=
+tyle=3D"width:42px;"><a href=3D"https://www.patreon.com/WarbyPicus?utm_camp=
+aign=3Dpatron_engagement&amp;utm_source=3Dcreator_link&amp;utm_id=3D2e53c47=
+0-d27d-40ae-b471-0012c0445e18&amp;utm_medium=3Demail" rel=3D"noopener noref=
+errer" style=3D"color:#000000;text-decoration:underline;" target=3D"_blank"=
+><span style=3D"color:#000000;text-decoration:underline;"><img height=3D"au=
+to" src=3D"https://c10.patreonusercontent.com/4/patreon-media/p/campaign/99=
+91269/e7a63ecfe74d4ee199f7c92f16f567c6/eyJoIjo3NSwidyI6NzV9/4.jpg?token-has=
+h=3D5493H24JenqTrWiAmSi4LYCJDBhl8RfuJlcY1paoLwE%3D" style=3D"border:none;bo=
+rder-radius:4px;display:block;font-size:13px;height:auto;outline:none;text-=
+decoration:none;width:100%;" width=3D"42"></span></a></td></tr></tbody></ta=
+ble>
+ </td>
+=20
+ <td>
+=20
+=20
+ <h4 style=3D"color:#000000;font-family:'SF Pro Display', -apple-system, sy=
+stem-ui, BlinkMacSystemFont, 'Inter', Roboto, Arial, sans-serif, 'Apple Col=
+or Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';font-size:14px;font-weight:6=
+00;line-height:18px;margin:0;padding:0;text-align:left;"><a href=3D"https:/=
+/www.patreon.com/WarbyPicus?utm_campaign=3Dpatron_engagement&amp;utm_source=
+=3Dcreator_link&amp;utm_id=3D2e53c470-d27d-40ae-b471-0012c0445e18&amp;utm_m=
+edium=3Demail" style=3D"text-decoration:none;color:#000000;"><span style=3D=
+"text-decoration:none;color:#000000;">Warby Picus</span></a></h4>
+=20
+=20
+ <div style=3D"color:#666666;font-family:-apple-system, system-ui, BlinkMac=
+SystemFont, 'Inter', Roboto, Arial, sans-serif, 'Apple Color Emoji', 'Segoe=
+ UI Emoji', 'Segoe UI Symbol';font-size:14px;font-weight:400;line-height:20=
+px;text-align:left;">Jan 9, 2026</div>
+=20
+ </td>
+ </tr>
+ </tbody>
+ </table>
+ </div>
+ </div></td></tr>
+ <tr><td style=3D"font-size:0px;word-break:break-word;"><div style=3D"heigh=
+t:16px;line-height:16px;">=E2=80=8A</div></td></tr>
+ <tr><td><div>
+ <div>
+ <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" class=3D"icon-mb-a=
+l">
+ <tbody>
+ <tr style=3D"padding-top 16px;">
+ <td align=3D"left" style=3D"padding-right: 8px">
+ <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presentati=
+on" style=3D"border-collapse:separate;line-height:100%;"><tbody><tr><td ali=
+gn=3D"center" bgcolor=3D"transparent" role=3D"presentation" style=3D"border=
+:1px solid #cccccc;background:transparent;border-radius:50px;cursor:auto;ms=
+o-padding-alt:8px;" valign=3D"middle"><a class=3D"dys-button-a" href=3D"htt=
+ps://www.patreon.com/posts/sky-pride-vol-5-147778429?utm_campaign=3Dpatron_=
+engagement&amp;utm_source=3Dpost_link&amp;post_id=3D147778429&amp;token=3De=
+yJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWRpc19rZXkiOiJpYTI6YzBjMzllMzMtMDY=
+wNy00ZGJiLWE4OWEtYjJmNDM3MmM0ZGRlIiwicG9zdF9pZCI6MTQ3Nzc4NDI5LCJwYXRyb25faW=
+QiOjcyODQzODl9.nQOoG31ZdNrjWpgK2fXZLjsGrNZH2vYh0QP2mkSnmGQ&amp;utm_id=3D2e5=
+3c470-d27d-40ae-b471-0012c0445e18&amp;utm_medium=3Demail" rel=3D"noopener n=
+oreferrer" style=3D"background:transparent;border-radius:50px;color:#ffffff=
+;display:inline-block;font-family:'SF Pro Display', -apple-system, system-u=
+i, BlinkMacSystemFont, 'Inter', Roboto, Arial, sans-serif, 'Apple Color Emo=
+ji', 'Segoe UI Emoji', 'Segoe UI Symbol';font-size:16px;font-weight:600;lin=
+e-height:16px;margin:0;mso-padding-alt:0px;padding:8px;text-decoration:none=
+;text-transform:none;" target=3D"_blank"><!--[if mso | IE]><span style=3D"m=
+so-text-raise:-2px;"><![endif]--><img alt=3D"like" src=3D"https://cdn-web-a=
+ssets.dyspatch.io/org_01gvh8mwwb22j90stngkwjbkvx/fdr_01jmdv6s5fevecq2mwr1tm=
+mwss%2FmEPm9PuPRYKykZNvWcmk_HeartOutline.png" style=3D"vertical-align:-2px;=
+width:19px;" width=3D"19"><!--[if mso | IE]></span><![endif]--></a></td></t=
+r></tbody></table>
+ </td>
+ <td align=3D"center" style=3D"padding-right: 8px">
+ <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presentati=
+on" style=3D"border-collapse:separate;line-height:100%;"><tbody><tr><td ali=
+gn=3D"center" bgcolor=3D"transparent" role=3D"presentation" style=3D"border=
+:1px solid #cccccc;background:transparent;border-radius:50px;cursor:auto;ms=
+o-padding-alt:8px;" valign=3D"middle"><a class=3D"dys-button-a" href=3D"htt=
+ps://www.patreon.com/posts/sky-pride-vol-5-147778429?utm_campaign=3Dpatron_=
+engagement&amp;utm_source=3Dpost_link&amp;post_id=3D147778429&amp;token=3De=
+yJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWRpc19rZXkiOiJpYTI6YzBjMzllMzMtMDY=
+wNy00ZGJiLWE4OWEtYjJmNDM3MmM0ZGRlIiwicG9zdF9pZCI6MTQ3Nzc4NDI5LCJwYXRyb25faW=
+QiOjcyODQzODl9.nQOoG31ZdNrjWpgK2fXZLjsGrNZH2vYh0QP2mkSnmGQ&amp;utm_id=3D2e5=
+3c470-d27d-40ae-b471-0012c0445e18&amp;utm_medium=3Demail" rel=3D"noopener n=
+oreferrer" style=3D"background:transparent;border-radius:50px;color:#ffffff=
+;display:inline-block;font-family:'SF Pro Display', -apple-system, system-u=
+i, BlinkMacSystemFont, 'Inter', Roboto, Arial, sans-serif, 'Apple Color Emo=
+ji', 'Segoe UI Emoji', 'Segoe UI Symbol';font-size:16px;font-weight:600;lin=
+e-height:16px;margin:0;mso-padding-alt:0px;padding:8px;text-decoration:none=
+;text-transform:none;" target=3D"_blank"><!--[if mso | IE]><span style=3D"m=
+so-text-raise:-2px;"><![endif]--><img alt=3D"comment" src=3D"https://cdn-we=
+b-assets.dyspatch.io/org_01gvh8mwwb22j90stngkwjbkvx/fdr_01jmdv6s5fevecq2mwr=
+1tmmwss%2FpONe1AzqSS2ydddAswCs_BubbleOutlined%20(1).png" style=3D"vertical-=
+align:-2px;width:19px;" width=3D"19"><!--[if mso | IE]></span><![endif]--><=
+/a></td></tr></tbody></table>
+ </td>
+ <td align=3D"right" style=3D"padding-right: 8px">
+ <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presentati=
+on" style=3D"border-collapse:separate;line-height:100%;"><tbody><tr><td ali=
+gn=3D"center" bgcolor=3D"transparent" role=3D"presentation" style=3D"border=
+:1px solid #cccccc;background:transparent;border-radius:50px;cursor:auto;ms=
+o-padding-alt:8px;" valign=3D"middle"><a class=3D"dys-button-a" href=3D"htt=
+ps://www.patreon.com/posts/sky-pride-vol-5-147778429?utm_campaign=3Dpatron_=
+engagement&amp;utm_source=3Dpost_link&amp;post_id=3D147778429&amp;token=3De=
+yJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWRpc19rZXkiOiJpYTI6YzBjMzllMzMtMDY=
+wNy00ZGJiLWE4OWEtYjJmNDM3MmM0ZGRlIiwicG9zdF9pZCI6MTQ3Nzc4NDI5LCJwYXRyb25faW=
+QiOjcyODQzODl9.nQOoG31ZdNrjWpgK2fXZLjsGrNZH2vYh0QP2mkSnmGQ&amp;utm_id=3D2e5=
+3c470-d27d-40ae-b471-0012c0445e18&amp;utm_medium=3Demail" rel=3D"noopener n=
+oreferrer" style=3D"background:transparent;border-radius:50px;color:#ffffff=
+;display:inline-block;font-family:'SF Pro Display', -apple-system, system-u=
+i, BlinkMacSystemFont, 'Inter', Roboto, Arial, sans-serif, 'Apple Color Emo=
+ji', 'Segoe UI Emoji', 'Segoe UI Symbol';font-size:16px;font-weight:600;lin=
+e-height:16px;margin:0;mso-padding-alt:0px;padding:8px;text-decoration:none=
+;text-transform:none;" target=3D"_blank"><!--[if mso | IE]><span style=3D"m=
+so-text-raise:-2px;"><![endif]--><img alt=3D"share" src=3D"https://cdn-web-=
+assets.dyspatch.io/org_01gvh8mwwb22j90stngkwjbkvx/fdr_01jmdv6s5fevecq2mwr1t=
+mmwss%2FFkHQyZCfR8O5oErCuqC4_Share%20(2).png" style=3D"vertical-align:-2px;=
+width:19px;" width=3D"19"><!--[if mso | IE]></span><![endif]--></a></td></t=
+r></tbody></table>
+ </td>
+ <td>
+=20
+ <div class=3D"dys-desktop"><table border=3D"0" cellpadding=3D"0" cellspaci=
+ng=3D"0" role=3D"presentation" style=3D"border-collapse:separate;line-heigh=
+t:100%;"><tbody><tr><td align=3D"center" bgcolor=3D"transparent" role=3D"pr=
+esentation" style=3D"border:1px solid #CCCCCC;border-color:#CCCCCC;backgrou=
+nd:transparent;border-radius:50px;cursor:auto;mso-padding-alt:8px 20px;" va=
+lign=3D"middle"><a class=3D"dys-button-a" href=3D"https://open.patreon.com/=
+posts/sky-pride-vol-5-147778429?utm_campaign=3Dpatron_engagement&amp;utm_so=
+urce=3Dpost_link&amp;post_id=3D147778429&amp;token=3DeyJhbGciOiJIUzI1NiIsIn=
+R5cCI6IkpXVCJ9.eyJyZWRpc19rZXkiOiJpYTI6YzBjMzllMzMtMDYwNy00ZGJiLWE4OWEtYjJm=
+NDM3MmM0ZGRlIiwicG9zdF9pZCI6MTQ3Nzc4NDI5LCJwYXRyb25faWQiOjcyODQzODl9.nQOoG3=
+1ZdNrjWpgK2fXZLjsGrNZH2vYh0QP2mkSnmGQ&amp;utm_id=3D2e53c470-d27d-40ae-b471-=
+0012c0445e18&amp;utm_medium=3Demail" rel=3D"noopener noreferrer" style=3D"b=
+ackground:transparent;border-radius:50px;color:#000000;display:inline-block=
+;font-family:'SF Pro Display', -apple-system, system-ui, BlinkMacSystemFont=
+, 'Inter', Roboto, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji'=
+, 'Segoe UI Symbol';font-size:14px;font-weight:600;line-height:20px;margin:=
+0;mso-padding-alt:0px;padding:8px 20px;text-decoration:none;text-transform:=
+none;" target=3D"_blank">View in app</a></td></tr></tbody></table></div>
+=20
+=20
+ <div><!--[if !mso]--><div class=3D"dys-mobile" style=3D"display:none;"><ta=
+ble border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presentation" =
+style=3D"border-collapse:separate;line-height:100%;"><tbody><tr><td align=
+=3D"center" bgcolor=3D"transparent" role=3D"presentation" style=3D"border:1=
+px solid #CCCCCC;border-color:#CCCCCC;background:transparent;border-radius:=
+50px;cursor:auto;mso-padding-alt:8px 20px;" valign=3D"middle"><a class=3D"d=
+ys-button-a" href=3D"https://open.patreon.com/posts/sky-pride-vol-5-1477784=
+29?utm_campaign=3Dpatron_engagement&amp;utm_source=3Dpost_link&amp;post_id=
+=3D147778429&amp;token=3DeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWRpc19rZ=
+XkiOiJpYTI6YzBjMzllMzMtMDYwNy00ZGJiLWE4OWEtYjJmNDM3MmM0ZGRlIiwicG9zdF9pZCI6=
+MTQ3Nzc4NDI5LCJwYXRyb25faWQiOjcyODQzODl9.nQOoG31ZdNrjWpgK2fXZLjsGrNZH2vYh0Q=
+P2mkSnmGQ&amp;utm_id=3D2e53c470-d27d-40ae-b471-0012c0445e18&amp;utm_medium=
+=3Demail" rel=3D"noopener noreferrer" style=3D"background:transparent;borde=
+r-radius:50px;color:#000000;display:inline-block;font-family:'SF Pro Displa=
+y', -apple-system, system-ui, BlinkMacSystemFont, 'Inter', Roboto, Arial, s=
+ans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';font-si=
+ze:14px;font-weight:600;line-height:20px;margin:0;mso-padding-alt:0px;paddi=
+ng:8px 20px;text-decoration:none;text-transform:none;" target=3D"_blank">Vi=
+ew in app</a></td></tr></tbody></table></div><!--[endif]--></div>
+=20
+ </td>
+ </tr>
+ </tbody>
+ </table>
+ </div>
+ </div></td></tr>
+ </tbody></table></div><!--[if mso | IE]>
+</td></tr></table>
+<![endif]--></td></tr></tbody></table></div><!--[if mso | IE]>
+</td></tr></table>
+<![endif]-->
+=20
+ <!--[if mso | IE]>
+<table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" cl=
+ass=3D"row-mb-pd-outlook" style=3D"width:600px;" width=3D"600"><tr><td styl=
+e=3D"line-height:0px;font-size:0px;mso-line-height-rule:exactly;">
+<![endif]--><div class=3D"row-mb-pd" style=3D"margin:0px auto;max-width:600=
+px;"><table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"=
+0" role=3D"presentation" style=3D"width:100%;"><tbody><tr><td style=3D"dire=
+ction:ltr;font-size:0px;padding:0px 4px;padding-bottom:0px;padding-left:12p=
+x;padding-right:12px;padding-top:0px;text-align:center;vertical-align:top;"=
+><!--[if mso | IE]>
+<table role=3D"presentation" border=3D"0" cellpadding=3D"0" cellspacing=3D"=
+0"><tr><td style=3D"vertical-align:top;width:576px;">
+<![endif]--><div class=3D"dys-column-per-100 outlook-group-fix" style=3D"di=
+rection:ltr;display:inline-block;font-size:13px;text-align:left;vertical-al=
+ign:top;width:100%;"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0=
+" role=3D"presentation" style=3D"vertical-align:top;" width=3D"100%">
+ <tbody><tr><td align=3D"left" class=3D"text-mb-sz-16 post-content" style=
+=3D"font-size:0px;padding:0px 0px 16px;padding-bottom:0;word-break:break-wo=
+rd;"><div style=3D"color:#000000;font-family:-apple-system, system-ui, Blin=
+kMacSystemFont, 'Inter', Roboto, Arial, sans-serif, 'Apple Color Emoji', 'S=
+egoe UI Emoji', 'Segoe UI Symbol';font-size:18px;font-weight:400;line-heigh=
+t:29px;text-align:left;"><p style=3D"margin-top:0;margin-bottom:0"></p><p>T=
+he group quickly made what few defensive moves they could. Tian=E2=80=99s f=
+irst instinct was to pull out some barricades he had in a ring, but quickly=
+ decided against it. The Monkeys would be attacking from the trees, either =
+coming straight down on top of them, or attacking from a high angle. Nothin=
+g he could cobble together would give them an edge there.&nbsp;</p><p>The W=
+ang Clan prepared differently. Brother Wang quickly hung a talisman around =
+his neck, while Sister Su slipped a carved bit of glass in a gold hoop over=
+ one eye. She also, Tian was relieved to see, pulled out her little flag an=
+d bundle of darts. The monkeys were about to find out that numbers were not=
+ on their side.</p><p>As for Sister Lin, she had her bow out, a beautiful c=
+onstruction of heavy wood and horn, and a generously stocked quiver of arro=
+ws hanging at her waist. She daintily cleared her throat, and proceeded to =
+screech, howl and yap in a way that would have had Tian delivering a therap=
+eutic kick to the head in almost any other circumstances.&nbsp;</p><p>The m=
+onkeys, now visible in the trees, made no reply.</p><p>=E2=80=9CIt was wort=
+h a shot.=E2=80=9D Lin shrugged and knocked an arrow. =E2=80=9CThough they =
+are too quiet to be proper macaques. Expect odd behavior.=E2=80=9D</p><p><e=
+m>=E2=80=9CLike the fact that they are on fire?=E2=80=9D</em> Tian had his =
+rope dart out, the head lazily spinning by his side.&nbsp;</p><p>Lin drew h=
+er bow back, and loosed a long arrow. One of the monkeys was impaled and pi=
+nned against a tree- falling off the tree almost immediately. It seems the =
+arrow didn=E2=80=99t manage to penetrate.</p><p>=E2=80=9COh nonsense! I can=
+ put an arrow through <em>granite</em>-=E2=80=9D The monkey exploded in a p=
+uff of fire. =E2=80=9CLike I said. Unnatural.=E2=80=9D</p><p>=E2=80=9CDeplo=
+ying swarm countermeasures.=E2=80=9D Sister Su said, cool as a knife in aut=
+umn. She swung her little flag out like a swordsman making a point, and ins=
+tead of her usual upward launch of her darts, she flung them side-arm at th=
+e monkeys.&nbsp;</p><p><em>=E2=80=9CIs that flag a little different? I thin=
+k it is.=E2=80=9D</em></p><p>The bundle accelerated, separated, then separa=
+ted again. Clouds of rock dust popped up, as the uncontrolled darts smashed=
+ into trees and shattered. Enough of them hit monkeys. Then the next wave o=
+f darts came. Then the next. Sister Su had never forgotten the battle at De=
+pot Four. She had killed more than her fair share of demons, killed so many=
+ that people thought a Heavenly Person had made a move. But there was alway=
+s room to optimize.&nbsp;</p><p>It was good that she had. =E2=80=9CThat=E2=
+=80=99s a lot more than two hundred monkeys!=E2=80=9D Brother Wang yelled, =
+and he was right. Worse, the monkeys were using their brains and starting t=
+o move from cover to cover in the trees. There was an eerie silence to them=
+=2E Lin and Su kept up the stream of at=
+tacks, but while it thinned their numb=
+ers, the wave of monkeys pressed in.&nbsp;</p><p><em>=E2=80=9CAre they glar=
+ing at me? I feel like they are staring at me. Fixated on me.=E2=80=9D</em>=
+</p><p>Liren dropped back a little, positioning herself close enough to hel=
+p, but still out of the likely radius of a swinging dart. They had trained =
+and fought together for half their lives, and her eyes had always been quic=
+ker than his. The others picked up on it when the monkeys started clumping,=
+ converging on Tian. The good news is that it made Su=E2=80=99s darts more =
+effective. That was the only good news.</p><p>They swarmed in, in their hun=
+dreds, flaming fur, long claws, eyes narrowed in fury. Twenty yards out, th=
+ey started screaming. It was the only way he could describe it, primal scre=
+ams of absolute hatred and fury. All aimed at him. Anger so pure and ancien=
+t it shuddered the soul. He didn=E2=80=99t wait for them to get any closer.=
+ He reached like a vine, and twisted.&nbsp;</p><p>The heavy steel head rush=
+ed out and plucked a monkey from the air. The heavy steel head bit into the=
+ small chest with enough force to punch completely through it, then returne=
+d to his hand all in the space of a single breath. The monkey burst into a =
+small fireball in the air. The other monkeys didn=E2=80=99t seem to notice =
+or care. They kept right on coming.</p><p>Liren=E2=80=99s spear was lively =
+as a dragon, relying on skill and control more than explosive speed and str=
+ength. Instead of skewering individual monkeys, she tried to slap them away=
+, knocking them into heaps for Su to exterminate.&nbsp;</p><p>Brother Wang =
+was doing something similar. His shield was nearly as big as he was. Monkey=
+s that hit the iron slab bounced off again, usually quite some distance. He=
+, too, tried to deflect the monkeys into a heap for disposal.&nbsp;</p><p>=
+=E2=80=9CForm up around Brother Tian. I don=E2=80=99t know why they are tar=
+geting him, but it makes them easier for the rest of us to kill!=E2=80=9D W=
+ang yelled.&nbsp;</p><p>An old memory intruded, from before Tian had joined=
+ the Monastery. Baboons had furiously pursued him through the jungle. In pa=
+rt because he had killed one of their troop, but also=E2=80=A6&nbsp;</p><p>=
+=E2=80=9CI smell good to them. I smell=E2=80=A6 really good to them.=E2=80=
+=9D Tian felt like crying.</p><p>=E2=80=9CI don=E2=80=99t think the unnatur=
+al magic monkeys are interested in lotuses, Brother Tian.=E2=80=9D Lin snar=
+led as she put another arrow to her string.&nbsp;</p><p>=E2=80=9CWell what =
+the hell else could it be?=E2=80=9D Tian kept his rope dart moving, dipping=
+ around tree trunks to pick off the monkeys protected from Sister Su=E2=80=
+=99s barrage. =E2=80=9CCould it be because I killed one coming in here?=E2=
+=80=9D</p><p>Everyone was focused on the monkeys for a few more seconds. Th=
+en Liren spoke. =E2=80=9CIt=E2=80=99s the pinecone. They didn=E2=80=99t att=
+ack until you got the pinecone and brought it here. Two gates, one water, o=
+ne fire. Two types of energy in the pinecone, fire and water. It will have =
+seeds.=E2=80=9D</p><p>Tian=E2=80=99s brain raced ahead. The bowls coming ou=
+t of the gate were too far apart to be manipulated at the same time by one =
+person. He had a feeling that the timing would matter.&nbsp;</p><p>=E2=80=
+=9CLiren, Wang, Su, cover me.=E2=80=9D</p><p>=E2=80=9COn it!=E2=80=9D</p><p=
+>Tian pulled out the pinecone, doing his best to rip it open. It was stone,=
+ naturally, and tough. There was probably a trick to it. Tian couldn=E2=80=
+=99t be bothered to figure it out. He opted, instead, for violence. Slim wh=
+ite fingers burrowed into the stone and started tearing. Shimmering seeds o=
+f blue and red emerged, carrying a faint woody fragrance and a twist of spi=
+ritual qi that promised they would be the very best body cultivation supple=
+ments. Just holding them, you knew they were an absolute treasure in the Ea=
+rthly Realm. Just one of each would be enough. Just one of each, and you co=
+uld elevate an ordinary physique into something special. Heavens alone knew=
+ what it would do for a physique like Tian=E2=80=99s.&nbsp;</p><p><em>=E2=
+=80=9COnce again, the tension between the petty scumbags and the broadminde=
+d.=E2=80=9D</em></p><p>=E2=80=9CSister Lin, with me. You will put the seeds=
+ in the water basin, I=E2=80=99ll put =E2=80=98em in the fire basin. Don=E2=
+=80=99t be tempted!=E2=80=9D</p><p>Tian rushed to the gate, Lin dropping ba=
+ck with him. Tian poured the water seeds into her hand, and held on to the =
+fire seeds. She looked like she had questions, but bit them back. Then did =
+a double take and stared down at the seeds in her hand. You could see the d=
+esire flash across her like a prairie fire. Her face set into something har=
+d.</p><p>=E2=80=9CAt the same time! It=E2=80=99s a teamwork test!=E2=80=9D =
+Lin yelled as she moved. Tian grunted in agreement and raced for the basin =
+holding the flame. The monkeys were screaming even louder now, frantic, rag=
+ing.&nbsp; Diving through the barrage and scrambling to get past Brother Wa=
+ng. Liren was barely keeping them back with big swings of her spear, knocki=
+ng a half dozen or more together with a single blow and funneling them into=
+ clumps for Sister Su to clear.&nbsp;</p><p>Their fixation on Tian was thei=
+r undoing. If they were a little more flexible, they would attack from more=
+ directions. As it was, they followed the shortest route they could manage.=
+ A straight-ish line. Su had no problem dealing with a lot of enemies obedi=
+ently coming straight at her.</p><p>=E2=80=9COn Three! One! Two! Three!=E2=
+=80=9D Lin yelled, and matched actions to words. Tian followed her play, du=
+mping the precious seeds into the fire. They puffed into brilliant life, th=
+en, ash. And with the ash, the fire extinguished.&nbsp;</p><p>The gate open=
+ed, silent on its ancient hinges. The monkeys looked confused and suddenly =
+hesitant, but Tian didn=E2=80=99t intend to wait around for them. =E2=80=9C=
+Through the gate, go, go!=E2=80=9D</p><p>They piled through, Wang coming up=
+ behind, his shield making a wall behind the group. The monkeys didn=E2=80=
+=99t pursue very hard. It seemed like they knew about the barrier. Tian swo=
+re he saw some of them looking puzzled, like they couldn=E2=80=99t imagine =
+why they were there in the first place.</p><p>=E2=80=9CI refuse to believe =
+that was the intended difficulty for this challenge. No way. We have excell=
+ent skills and equipment, we are at level nine=E2=80=A6 or near enough=E2=
+=80=A6 and we have had our shares of fortuitous encounters. Some newbie cul=
+tivator was supposed to get through that? Not unless they had already been =
+raised by a cultivator clan.=E2=80=9D</p><p>Brother Wang collapsed in a spr=
+awl, entirely uncaring about the dignity of the Wang Clan Patriarch. Though=
+, Tian wondered if it wasn=E2=80=99t really a matriarchy. Brother Wang was =
+thoroughly outnumbered, and Sister Mei had the highest cultivation level. T=
+ian collapsed with far more dignity on a rock.&nbsp;</p><p>=E2=80=9CMaybe t=
+here was supposed to be a limit on the number of monkeys. What would have h=
+appened if you had eaten those seeds? Or refined them?=E2=80=9D Liren asked=
+=2E&nbsp;</p><p>=E2=80=9CWe would have=20=
+died.=E2=80=9D Sister Su gave Liren a=20=
+bewildered look.&nbsp;</p><p>=E2=80=9CWhat I want to know is how you knew t=
+o put fire with fire and water with water. What if the key had been to exti=
+nguish the flames? Or to burn away the water?=E2=80=9D Lin asked.</p><p>=E2=
+=80=9CSnobs.=E2=80=9D</p><p>There was silence at that. Tian waved a tired h=
+and and elaborated. =E2=80=9CWe are guessing that the people who designed t=
+his challenge were scumbags. But they weren=E2=80=99t. If you could make al=
+l this, you are a genius, and probably a bunch of geniuses. Of course, they=
+ have to <em>plan</em> for the scumbags, because rock throwers are universa=
+l.=E2=80=9D</p><p>=E2=80=9CRock throwers?=E2=80=9D Sister Su asked.</p><p>=
+=E2=80=9CNot important right now. Basically, they are screening for charact=
+er, and they are screening for some understanding of the=E2=80=A6 I don=E2=
+=80=99t know, the basic rules of the universe. Particularly five element th=
+eory. Remember the Saintess?=E2=80=9D</p><p>=E2=80=9CI never had the pleasu=
+re of meeting her.=E2=80=9D Lin=E2=80=99s voice was icy. Tian winced, but q=
+uickly pressed on.</p><p>=E2=80=9CWater restrains fire, but fire restrains =
+wood. <em>Earth</em> restrains water. But people don=E2=80=99t think that w=
+ay normally, and they definitely don=E2=80=99t if they are distracted and u=
+nder heavy pressure.=E2=80=9D Tian continued.</p><p>=E2=80=9CI did find the=
+ giant horde of screaming monkeys that were also on fire pretty damned dist=
+racting.=E2=80=9D Brother Wang admitted.</p><p>=E2=80=9CSo the test is this=
+- are you restrained enough to not eat the treasure immediately? Is one per=
+son strong enough to hang on to all the seeds, or do they get divided up, i=
+ncreasing the chance that they are lost or eaten? When put under pressure, =
+can you remain composed? Can you remember your education? Can you figure ou=
+t your elder=E2=80=99s intentions? And does that one strong person have eno=
+ugh trust in the rest of the party, and have the trust of the rest of the p=
+arty, enough to open the gates? If the answer is yes to all that, then cong=
+ratulations, you are the kind of people the Palace wants. If not=E2=80=A6=
+=E2=80=9D</p><p>=E2=80=9CThey won=E2=80=99t be picking up your bones.=E2=80=
+=9D Brother Wang pulled a handkerchief out of his ring and wiped down the b=
+ack of his neck. =E2=80=9CLovely. I see what you mean about snobs. That is =
+an=E2=80=A6 excessively high standard to meet, given that they are screenin=
+g potential servants.=E2=80=9D</p><p>Liren nodded, then shrugged. =E2=80=9C=
+They were a transcendent power covering several countries. I feel like havi=
+ng too many applicants was more of a problem than too few.=E2=80=9D</p><p>L=
+in looked thoughtfully at Tian for a long moment, then started to laugh. It=
+ was the most cheerful noise Tian could remember her ever making. =E2=80=9C=
+Oh heavens! It makes perfect sense why you figured out the first two tests =
+before everyone else- it=E2=80=99s you! The perfect candidate to join the E=
+ight Directions Palace=E2=80=99s Servants Division is none other than that =
+rising dragon, Tian Zihao!=E2=80=9D</p><p></p></div></td></tr>
+ </tbody></table></div><!--[if mso | IE]>
+</td></tr></table>
+<![endif]--></td></tr></tbody></table></div><!--[if mso | IE]>
+</td></tr></table>
+<![endif]-->
+
+=20
+=20
+ <!--[if mso | IE]>
+<table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" cl=
+ass=3D"row-mb-pd-outlook" style=3D"width:600px;" width=3D"600"><tr><td styl=
+e=3D"line-height:0px;font-size:0px;mso-line-height-rule:exactly;">
+<![endif]--><div class=3D"row-mb-pd" style=3D"margin:0px auto;max-width:600=
+px;"><table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"=
+0" role=3D"presentation" style=3D"width:100%;"><tbody><tr><td style=3D"dire=
+ction:ltr;font-size:0px;padding:16px 4px;text-align:center;vertical-align:t=
+op;"><!--[if mso | IE]>
+<table role=3D"presentation" border=3D"0" cellpadding=3D"0" cellspacing=3D"=
+0"><tr><td style=3D"line-height:0px;font-size:0px;mso-line-height-rule:exac=
+tly;">
+<![endif]--><!--[if mso | IE]>
+<table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" cl=
+ass=3D"mb-pd-cr-outlook card-pd-32-outlook mb-crd-pd-outlook" style=3D"widt=
+h:592px;" width=3D"592"><tr><td style=3D"line-height:0px;font-size:0px;mso-=
+line-height-rule:exactly;">
+<![endif]--><div class=3D"mb-pd-cr card-pd-32 mb-crd-pd" style=3D"backgroun=
+d-color:#F5F5F5;border-radius:8px;margin:0px auto;max-width:592px;"><table =
+align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"p=
+resentation" style=3D"background-color:#F5F5F5;border-collapse:separate;bor=
+der-radius:8px;width:100%;"><tbody><tr><td style=3D"border-radius:8px;direc=
+tion:ltr;font-size:0px;padding:24px;text-align:center;vertical-align:top;">=
+<!--[if mso | IE]>
+<table role=3D"presentation" border=3D"0" cellpadding=3D"0" cellspacing=3D"=
+0"><tr><td style=3D"vertical-align:top;width:544px;">
+<![endif]--><div class=3D"dys-column-per-100 outlook-group-fix" style=3D"di=
+rection:ltr;display:inline-block;font-size:13px;text-align:left;vertical-al=
+ign:top;width:100%;"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0=
+" role=3D"presentation" style=3D"vertical-align:top;" width=3D"100%">
+ <tbody><tr><td><div>
+ <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" class=3D"stack-con=
+tainer-mb" width=3D"100%">
+ <tbody>
+ <tr>
+ <td valign=3D"middle">
+ <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"100%">
+ <tbody>
+ <tr>
+ <td height=3D"60" style=3D"min-width:60px;min-height:60px;width:60px;heigh=
+t:60;" width=3D"60">
+ <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presentati=
+on" style=3D"border-collapse:collapse;border-spacing:0px;"><tbody><tr><td s=
+tyle=3D"width:60px;"><img height=3D"auto" src=3D"https://c10.patreonusercon=
+tent.com/4/patreon-media/p/campaign/9991269/e7a63ecfe74d4ee199f7c92f16f567c=
+6/eyJoIjoxMjAsInciOjEyMH0%3D/4.jpg?token-hash=3DKk9241YyTO2WxrDr3y_52vHjHD1=
+5W6BqOOony2CENRU%3D" style=3D"border:none;border-radius:60px;display:block;=
+font-size:13px;height:auto;outline:none;text-decoration:none;width:100%;" w=
+idth=3D"60"></td></tr></tbody></table>
+ </td>
+ <td style=3D"padding-left:16px;">
+ <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0">
+ <tbody>
+ <tr>
+ <td>
+ <h4 style=3D"color:#000000;font-family:'SF Pro Display', -apple-system, sy=
+stem-ui, BlinkMacSystemFont, 'Inter', Roboto, Arial, sans-serif, 'Apple Col=
+or Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';font-size:16px;font-weight:6=
+00;line-height:21px;margin:0;padding:0;text-align:left;"><p style=3D"margin=
+-top:0;margin-bottom:0"> Did you like this post?</p></h4>
+ </td>
+ </tr>
+ <tr>
+ <td style=3D"padding-top:4px;">
+ <div style=3D"color:#626262;font-family:-apple-system, system-ui, BlinkMac=
+SystemFont, 'Inter', Roboto, Arial, sans-serif, 'Apple Color Emoji', 'Segoe=
+ UI Emoji', 'Segoe UI Symbol';font-size:14px;font-weight:400;line-height:20=
+px;text-align:left;"><p style=3D"margin-top:0;margin-bottom:0"> Share this =
+post with someone who might enjoy it.</p></div>
+ </td>
+ </tr>
+ </tbody>
+ </table>
+ </td>
+ </tr>
+ </tbody>
+ </table>
+ </td>
+ <td class=3D"button-cell-mb" style=3D"width:180px;max-width:180px;padding-=
+left:16px;word-break: break-all;" width=3D"180">
+ <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presentati=
+on" style=3D"border-collapse:separate;line-height:100%;width:100%;"><tbody>=
+<tr><td align=3D"center" bgcolor=3D"#0D0D0D" role=3D"presentation" style=3D=
+"border:1px solid #0D0D0D;border-color:#0D0D0D;background:#0D0D0D;border-ra=
+dius:50px;cursor:auto;mso-padding-alt:8px 20px;" valign=3D"middle"><a class=
+=3D"dys-button-a" href=3D"https://www.patreon.com/posts/sky-pride-vol-5-147=
+778429?utm_campaign=3Dpatron_engagement&amp;utm_source=3Dpost_link&amp;post=
+_id=3D147778429&amp;token=3DeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWRpc1=
+9rZXkiOiJpYTI6YzBjMzllMzMtMDYwNy00ZGJiLWE4OWEtYjJmNDM3MmM0ZGRlIiwicG9zdF9pZ=
+CI6MTQ3Nzc4NDI5LCJwYXRyb25faWQiOjcyODQzODl9.nQOoG31ZdNrjWpgK2fXZLjsGrNZH2vY=
+h0QP2mkSnmGQ&amp;utm_id=3D2e53c470-d27d-40ae-b471-0012c0445e18&amp;utm_medi=
+um=3Demail" rel=3D"noopener noreferrer" style=3D"background:#0D0D0D;border-=
+radius:50px;color:#ffffff;display:block;font-family:'SF Pro Display', -appl=
+e-system, system-ui, BlinkMacSystemFont, 'Inter', Roboto, Arial, sans-serif=
+, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';font-size:14px;f=
+ont-weight:600;line-height:20px;margin:0;mso-padding-alt:0px;padding:8px 20=
+px;text-decoration:none;text-transform:none;" target=3D"_blank">Share</a></=
+td></tr></tbody></table>
+ </td>
+ </tr>
+ </tbody>
+ </table>
+ </div></td></tr>
+ </tbody></table></div><!--[if mso | IE]>
+</td></tr></table>
+<![endif]--></td></tr></tbody></table></div><!--[if mso | IE]>
+</td></tr></table>
+<![endif]--><!--[if mso | IE]>
+</td></tr></table>
+<![endif]--></td></tr></tbody></table></div><!--[if mso | IE]>
+</td></tr></table>
+<![endif]-->
+
+=20
+=20
+=20
+ <!--[if mso | IE]>
+<table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" cl=
+ass=3D"row-mb-pad-outlook" style=3D"width:600px;" width=3D"600"><tr><td sty=
+le=3D"line-height:0px;font-size:0px;mso-line-height-rule:exactly;">
+<![endif]--><div class=3D"row-mb-pad" style=3D"margin:0px auto;max-width:60=
+0px;"><table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D=
+"0" role=3D"presentation" style=3D"width:100%;"><tbody><tr><td style=3D"dir=
+ection:ltr;font-size:0px;padding:0px 4px;padding-top:28px;text-align:center=
+;vertical-align:top;"><!--[if mso | IE]>
+<table role=3D"presentation" border=3D"0" cellpadding=3D"0" cellspacing=3D"=
+0"><tr><td style=3D"vertical-align:top;width:592px;">
+<![endif]--><div class=3D"dys-column-per-100 outlook-group-fix" style=3D"di=
+rection:ltr;display:inline-block;font-size:13px;text-align:left;vertical-al=
+ign:top;width:100%;"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0=
+" role=3D"presentation" style=3D"vertical-align:top;" width=3D"100%">
+ <tbody><tr><td align=3D"center" style=3D"font-size:0px;padding:0px;word-br=
+eak:break-word;"><p style=3D"border-top-color:#E8E8E8;border-top-style:soli=
+d;border-top-width:1px;font-size:1px;margin:0px auto;width:100%;"></p><!--[=
+if mso | IE]><table align=3D'center' border=3D'0' cellpadding=3D'0' cellspa=
+cing=3D'0' role=3D'presentation' style=3D'border-top-color:#E8E8E8;border-t=
+op-style:solid;border-top-width:1px;font-size:1px;margin:0px auto;width:592=
+px;' width=3D'592px'><tr><td style=3D'height:0;line-height:0;'>&nbsp</td></=
+tr></table><![endif]--></td></tr>
+ </tbody></table></div><!--[if mso | IE]>
+</td></tr></table>
+<![endif]--></td></tr></tbody></table></div><!--[if mso | IE]>
+</td></tr></table>
+<![endif]-->
+=20
+ <!--[if mso | IE]>
+<table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" cl=
+ass=3D"row-mb-pad-outlook" style=3D"width:600px;" width=3D"600"><tr><td sty=
+le=3D"line-height:0px;font-size:0px;mso-line-height-rule:exactly;">
+<![endif]--><div class=3D"row-mb-pad" style=3D"margin:0px auto;max-width:60=
+0px;"><table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D=
+"0" role=3D"presentation" style=3D"width:100%;"><tbody><tr><td style=3D"dir=
+ection:ltr;font-size:0px;padding:0px 4px;padding-top:16px;text-align:center=
+;vertical-align:top;"><!--[if mso | IE]>
+<table role=3D"presentation" border=3D"0" cellpadding=3D"0" cellspacing=3D"=
+0"><tr><td style=3D"vertical-align:top;width:296px;">
+<![endif]--><div class=3D"dys-column-per-50 outlook-group-fix" style=3D"dir=
+ection:ltr;display:inline-block;font-size:13px;text-align:left;vertical-ali=
+gn:top;width:100%;"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0"=
+ role=3D"presentation" style=3D"vertical-align:top;" width=3D"100%">
+ <tbody><tr><td align=3D"left" class=3D"fnt12" style=3D"font-size:0px;paddi=
+ng:0px 0px 16px;padding-bottom:0;word-break:break-word;"><div style=3D"colo=
+r:#666666;font-family:-apple-system, system-ui, BlinkMacSystemFont, 'Inter'=
+, Roboto, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe =
+UI Symbol';font-size:12px;font-weight:400;line-height:17px;text-align:left;=
+">
+ =C2=A9 2025 Warby Picus<br><a href=3D"https://privacy.patreon.com/policies=
+?utm_id=3D2e53c470-d27d-40ae-b471-0012c0445e18&amp;utm_medium=3Demail" rel=
+=3D"noopener noreferrer" style=3D"color:#666666;text-decoration:underline" =
+title=3D"Patreon's privacy policy">Privacy policy</a> | <a href=3D"https://=
+www.patreon.com/policy/legal?utm_id=3D2e53c470-d27d-40ae-b471-0012c0445e18&=
+amp;utm_medium=3Demail" rel=3D"noopener noreferrer" style=3D"color:#666666;=
+text-decoration:underline" title=3D"Patreon's terms of use">Terms of use</a=
+>
+ 600 Townsend Street<br>San Francisco, CA 94103
+ </div></td></tr>
+=20
+=20
+ </tbody></table></div><!--[if mso | IE]>
+</td><td style=3D"vertical-align:top;width:296px;">
+<![endif]--><div class=3D"dys-column-per-50 outlook-group-fix" style=3D"dir=
+ection:ltr;display:inline-block;font-size:13px;text-align:left;vertical-ali=
+gn:top;width:100%;"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0"=
+ role=3D"presentation" style=3D"vertical-align:top;" width=3D"100%">
+ <tbody><tr><td align=3D"right" class=3D"footer-text" style=3D"font-size:0p=
+x;padding:0px 0px 16px;padding-bottom:0;word-break:break-word;"><div style=
+=3D"color:#666666;font-family:-apple-system, system-ui, BlinkMacSystemFont,=
+ 'Inter', Roboto, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',=
+ 'Segoe UI Symbol';font-size:12px;font-weight:400;line-height:17px;text-ali=
+gn:right;">Email was sent to <a href=3D"mailto:asherlee.bxl@gmail.com" rel=
+=3D"noopener noreferrer" style=3D"color:#666666;text-decoration:underline">=
+asherlee.bxl@gmail.com</a><br><a href=3D"https://www.patreon.com/email-unsu=
+bscribe?token=3DeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGQiOiJaMEZCUVVGQl=
+FuQlpVbkJ3YURKbVVsOUtNVWgyTkY5RFZteEZhRWR0U1VobVQwSjJOVFpxWVU5c0xVbHZWakpwV=
+UZwbVdrbFBVMWt0VUdseGVHOWxTazgwYlhOM2EzRmFSa1psUTNkM2VtNHRaRWhIT1hrelJ6Vm9T=
+a00zV1VSc1JtTTBVazgwU1hWdWRWRnRlbmhvVkhOSVV6YzRhMVJLU25oc05YSXpRbkV4TFdWWmM=
+zSmpZak5MVFhodFkyOHhWa2xsUW1kYU1YWmhhMFZJYkZGYVJXUktSak5rUjJ4MVNISjZSRk5rWW=
+xoWk9XcDJTRUpGUTFGUFRGTjFNWGR0ZW10WU5WSkdZWFpNWkZCVmNqRXpUMEpYY0U1Nk5DMU5jM=
+U50TmtWdmJURm1UMVI0ZEhFdFNtdFlUVEV6Y0VFdGVEbHFTMDVMWm1aMFlYUlplbGRMTTBsaVJI=
+RmhMV3BNY1haTmMzTlJWbWRuZG5kMU9VSnZXbVJzYkd0aVJESnJWVEpDUmtwS1VFUmtaVFI2Tmt=
+OMmNFMVJNVnBTY0U1aVJEbEhkRkJMVW1wbGJEZGZWbGczVTJoemNWSlpiWEZxV25GRVltVTJkRF=
+F0ZFV0MGJsSkJlSFIyV0RZeVZrWmFTbWswYUZnMU5qaHdORWh2TlhSS04ya3pRV1kzU2tWdFpYa=
+DNhR1F5TlZSMFpVRlNVRFJ2WW1Ob00ybEdRMXBEYm5rMWJHOVVPRXQwWjJkRFVVaDJkR2hZWjJk=
+SU1uQXpXamRFYVZsRk9VaHZlbWRpV1ZGWWVsVTRhalJ1V210RFpqQmtiME4wTTJOVU9FTkJiM0J=
+CVTJJNGRucDBWMDFtUTNGU2VuVnhiSGRwU1RaWGEzbDZVVWxOWHpkalZGRTkifQ.QLi-dtYNBWQ=
+q5tJRS3D2hQhzW4mK3IZyHHUXubV3B9A&amp;utm_campaign=3Dpatron_engagement&amp;u=
+tm_source=3Dunsubscribe&amp;utm_id=3D2e53c470-d27d-40ae-b471-0012c0445e18&a=
+mp;utm_medium=3Demail" rel=3D"noopener noreferrer" style=3D"color:#666666;t=
+ext-decoration:underline">Unsubscribe</a> | <a href=3D"https://www.patreon.=
+com/settings/email/WarbyPicus?utm_campaign=3Dpatron_engagement&amp;utm_sour=
+ce=3Dmanage_email_settings&amp;utm_id=3D2e53c470-d27d-40ae-b471-0012c0445e1=
+8&amp;utm_medium=3Demail" rel=3D"noopener noreferrer" style=3D"color:#66666=
+6;text-decoration:underline">Manage your email settings</a></div></td></tr>
+ </tbody></table></div><!--[if mso | IE]>
+</td></tr></table>
+<![endif]--></td></tr></tbody></table></div><!--[if mso | IE]>
+</td></tr></table>
+<![endif]-->
+<!--[if mso | IE]>
+<table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" cl=
+ass=3D"row-mb-pad-outlook" style=3D"width:600px;" width=3D"600"><tr><td sty=
+le=3D"line-height:0px;font-size:0px;mso-line-height-rule:exactly;">
+<![endif]--><div class=3D"row-mb-pad" style=3D"margin:0px auto;max-width:60=
+0px;"><table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D=
+"0" role=3D"presentation" style=3D"width:100%;"><tbody><tr><td style=3D"dir=
+ection:ltr;font-size:0px;padding:0px 4px;padding-top:16px;text-align:center=
+;vertical-align:top;"><!--[if mso | IE]>
+<table role=3D"presentation" border=3D"0" cellpadding=3D"0" cellspacing=3D"=
+0"><tr><td style=3D"vertical-align:top;width:592px;">
+<![endif]--><div class=3D"dys-column-per-100 outlook-group-fix" style=3D"di=
+rection:ltr;display:inline-block;font-size:13px;text-align:left;vertical-al=
+ign:top;width:100%;"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0=
+" role=3D"presentation" style=3D"vertical-align:top;" width=3D"100%">
+ <tbody><tr><td align=3D"left" class=3D"fnt12" style=3D"font-size:0px;paddi=
+ng:0px 0px 16px;padding-top:0px;word-break:break-word;"><div style=3D"color=
+:#666666;font-family:-apple-system, system-ui, BlinkMacSystemFont, 'Inter',=
+ Roboto, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe U=
+I Symbol';font-size:12px;font-weight:400;line-height:17px;text-align:left;"=
+>
+ Download the app - <a href=3D"https://open.patreon.com/posts/sky-pride-vol=
+-5-147778429?utm_campaign=3Dpatron_engagement&amp;utm_source=3Dpost_link&am=
+p;post_id=3D147778429&amp;token=3DeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJy=
+ZWRpc19rZXkiOiJpYTI6YzBjMzllMzMtMDYwNy00ZGJiLWE4OWEtYjJmNDM3MmM0ZGRlIiwicG9=
+zdF9pZCI6MTQ3Nzc4NDI5LCJwYXRyb25faWQiOjcyODQzODl9.nQOoG31ZdNrjWpgK2fXZLjsGr=
+NZH2vYh0QP2mkSnmGQ&amp;utm_id=3D2e53c470-d27d-40ae-b471-0012c0445e18&amp;ut=
+m_medium=3Demail" rel=3D"noopener noreferrer" style=3D"color:#666666;text-d=
+ecoration:underline">Google Play</a> | <a href=3D"https://open.patreon.com/=
+posts/sky-pride-vol-5-147778429?utm_campaign=3Dpatron_engagement&amp;utm_so=
+urce=3Dpost_link&amp;post_id=3D147778429&amp;token=3DeyJhbGciOiJIUzI1NiIsIn=
+R5cCI6IkpXVCJ9.eyJyZWRpc19rZXkiOiJpYTI6YzBjMzllMzMtMDYwNy00ZGJiLWE4OWEtYjJm=
+NDM3MmM0ZGRlIiwicG9zdF9pZCI6MTQ3Nzc4NDI5LCJwYXRyb25faWQiOjcyODQzODl9.nQOoG3=
+1ZdNrjWpgK2fXZLjsGrNZH2vYh0QP2mkSnmGQ&amp;utm_id=3D2e53c470-d27d-40ae-b471-=
+0012c0445e18&amp;utm_medium=3Demail" rel=3D"noopener noreferrer" style=3D"c=
+olor:#666666;text-decoration:underline">App Store</a>
+ </div></td></tr>=20
+ </tbody></table></div><!--[if mso | IE]>
+</td></tr></table>
+<![endif]--></td></tr></tbody></table></div><!--[if mso | IE]>
+</td></tr></table>
+<![endif]-->
+</td></tr></tbody></table></div><!--[if mso | IE]></td></tr></table><![endi=
+f]--></div> <img width=3D"1" height=3D"1" alt=3D"" src=3D"http://email.mail=
+gun.patreon.com/o/eJyMVM2S4ygTfBrp8oUU_ArpwMHz9XliDnsnsKi22UagAORu79Nv6Kdle=
+6Y32jcJkqysqqw6Tu5NDcGARGWvh1Hbk1fWyK7rMGm6sp9SDoPywfcgf8J7cpAzxF8h5YIeMBNC=
+tIx0BT0QRJoK4Qp1_8O8oAeElsPSSECcdW1pwqCtV-ECMVoDctDWnSZfjzpHCL7uw1CCxKIRncC=
+M0hJmhNpVeT2AzFH7pPtsg9duQ1gjCXDaM4EqQ4SpGNJQHZnAFUKY9IgxDrjd0D5k-6q-yvX-Pl=
+9HkDtovRlDyhtojDZEm6_Shff9Z7tL15RhkMtPlSBebA-Vn_zfU_-WSvjIUSsXTifrT2qMYUyyE=
+D8KQsBnm6_KmoKQgh785FxB_l8QMkY76HhVK2C9_fLJrR3Lu-12TmV7RMicw_wjXlZMgj54s7Nb=
+SL9HT-ANxPuo68kedSvfPfox5mcZ7-Pe1X_H7URkxSydsL2em710f0f-hPdfWyIL8lX7MOV7LoS=
+7o6asqXRn2kp0mFbtEYuq7XgjGjCUY7PqKc8SNR3iDcGYc9bjV0OQ0JqB0RpBz7UorZzdjTDqMM=
+eI0ppQAdxQaoRojGFQMPSVna3P4PNqpsfhKW1SZ3s635yEyod8nzX1w6OdLGU9d9WUmxq1-XAdo=
+uVNNTqdX0McytkTc7zdPuvJojrDR1bBu2sZpU5niA6gPn64gqHTnPGSZtQZlLODzUkW_EfBX8oI=
+vR3tnHyy_4A6Tv0bZInLdA6TM6o_a-_BqXyOIWc3b5_tZng4zDLDMAsF5ff6LXOYdXqbRfdHhkF=
+0okJtayrWMFTpDrXVkTBNgGhMO1reSJb0f2Oyg_WnbQh7t4rOOmaV7Z3nbvvtr_v9VqNGcEy_Nu=
+1niefhitcxWJ93vnlS1Gbc-0fpG6oIPdgLmG_U4Xkf8LptWIv5bVCsyxDVrTvOpueybQp6YKRmh=
+PGGfMM3Z_YEG6spRoL-x8CfwENcP5_WtzJy9i3jcwo5q9u268hN4advn1CEZ39QXCOOCON_MIwx=
+XKxZa_dEP1c2WmPEW4H_YDPg7AXiA8uywsVLOaVlWUtBWkbbrrxI8m8AAAD__6AbgGo"></body=
+></html>
