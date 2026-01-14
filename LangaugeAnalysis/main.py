@@ -49,7 +49,7 @@ class LanguageAnalysis(Email):
     def __init__(self, email_path = None):
         super().__init__(email_path)
         #initiate LLM GenKeyWords here
-
+        
         self.keyword_path:str = '' #change later
         self.keyphrase_path:str = '' #change once genKeywords is finished
 
