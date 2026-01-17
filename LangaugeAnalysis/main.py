@@ -1,4 +1,24 @@
 from .main import Email  
+
+class Lemmatizer:
+    def __init__(self):
+        return
+
+    def init_wordlist(self,path:str = "Resources/WORDLISTS/lemmatization-en.txt"):
+        wordlist = {}
+        with open(path,'r',encoding="utf-8-sig") as file:
+            for line in file.readlines():
+                line = line.split()
+                wordlist[line[1]] = line[0]
+        return wordlist
+    
+    def WordList_lemmatizer(self,word:str):
+        self.wordlist = self.init_wordlist()
+        result = self.wordlist[word]
+        return result
+
+
+
 class LanguageAnalysis(Email):
     def __init__(self, email_path = None):
         super().__init__(email_path)
@@ -22,19 +42,19 @@ class LanguageAnalysis(Email):
     def language_risk_score(self):
         keywords = self.__init_file(self.keyword_path)
         keyphrases = self.__init_file(self.keyphrase_path)
-        self.risk_score:int = self.__score(self.__detect_suspect(self.subject,keywords,keyphrases)) * 1.4 + self.__score(self.__detect_suspect(self.text,keywords,keyphrases)) 
+        self.risk_score:int = self.__score(self.detect_suspect(self.subject,keywords,keyphrases)) * 1.4 + self.__score(self.detect_suspect(self.text,keywords,keyphrases)) 
         return self.risk_score
     
     #strips, simplifies and tokenise words 
     def tokenise(self,text:str):
-        lemmatizer = WordNetLemmatizer()
+        lemmatizer = Lemmatizer()
         tokenised = []
         for word in text.split():
-            tokenised.append(lemmatizer.lemmatize(word))
+            tokenised.append(lemmatizer.WordList_lemmatizer(word))
         return tokenised
 
     #flags suspect words/phrases in respect to its overall index for transparency reconstruction along with its calculated score
-    def __detect_suspect(self,text:str="",keywords:dict={},keyphrases:dict={}):
+    def detect_suspect(self,text:str="",keywords:dict={},keyphrases:dict={}):
         words = self.tokenise(text)
         max_phrase_size = len(max(keyphrases.keys(),key=len))
         flagged = {}
