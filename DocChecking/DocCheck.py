@@ -1,7 +1,10 @@
 #from .main import Email  
+from magic import *
+from size import *
 from os import listdir, remove, path
 from zipfile import ZipFile
-
+from email.utils import parsedate_to_datetime
+from datetime import datetime, timezone
 
 from email import policy
 from email.parser import Parser, HeaderParser
@@ -103,13 +106,20 @@ class Email:
 
 
 
+
+
+
+
 class DocChecking(Email):
     def __init__(self, email_path = None):
         super().__init__(email_path)
 
         self.document_path:str = 'Resources/TEMP_FILES'
         self.files:list[str] = self._get_files()
-        self.extensions: dict[str, str] = {}
+        self.extensions: dict[str, str] = self._extension_extraction()
+        self.file_size:int = (int(self.attachment_header[0]['size=']) / 1024) # convert to bytes
+        self.creation_date_epoch:int = self._date_extraction()[0]
+        self.modified_date_epoch:int = self._date_extraction()[1]
 
 
     def _get_files(self):
@@ -119,20 +129,101 @@ class DocChecking(Email):
             # returns list of file names
             return [name for name in listdir(self.document_path) if path.isfile(path.join(self.document_path, name))]
 
-    ################################### this should be extension extraction, then extension check should be checking against the first few bytes to determine the file extension
-    def extension_check(self):
-        self.extensions = {}
+    def _extension_extraction(self):
+        extensions = {}
 
         for file_name in self.files:
             file_split = file_name.split('.')
             if len(file_split) > 2:
                 # Placeholder risk flag
                 print("RISKYYYYYYY")
-                continue  # skip problematic files
 
-            self.extensions[file_split[0]] = file_split[-1]
+            extensions[file_split[0]] = file_split[-1]
 
-        return self.extensions
+        return extensions
+
+    
+    # depending on the email class dk if it will have multiple
+    def _date_extraction(self):
+        creation_date_epoch = self.to_epoch_time(self.attachment_header[0]['creation-date='])
+        modified_date_epoch = self.to_epoch_time(self.attachment_header[0]['modification-date='])
+        return [creation_date_epoch, modified_date_epoch]
+
+    # blocks executables
+    def block_high_risk_files(self):
+        BLOCKED_EMAIL_EXTENSIONS = ["exe", "com", "bat", "cmd", "scr", "pif", "js", "jse", "vbs", "vbe", "wsf", "wsh", "ps1", "psm1", "msi", "msp", "dll", "sys", "cpl","jar", "iso", "img", "apk"]
+        
+        for files in self.extensions:
+            if self.extensions[files] in BLOCKED_EMAIL_EXTENSIONS:
+                print("BLOCKEDDDDDD")
+                return 0
+            return 1
+
+    ################################### see if the logic make sense... or can add more when it comes to mind
+    def metadata_check(self):
+        epoch_time = int(time.time())
+
+        if self.creation_date_epoch == self.modified_date_epoch:
+            print("SUSSSSSSSSSSSSSSSSSSSSSSS")
+            return
+        
+        elif self.creation_date_epoch >= epoch_time or self.modified_date_epoch >= epoch_time:
+            print("SUSSSSSSSSSSSSSSSSSSSSSSS")
+            return
+
+
+    # convert date string to epoch (metadata check)
+    def to_epoch_time(self, date: str):
+        dt = parsedate_to_datetime(date)
+
+        # if timezone is missing, assume UTC
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        dt_utc = dt.astimezone(timezone.utc)
+
+        return int(dt_utc.timestamp())
+
+    # checks first few bytes to confirm extension
+    def extension_check(self):
+        for files in self.extensions:
+            with open(f'{self.document_path}/{files}.{self.extensions[files]}', 'rb') as f:
+                print(f'{self.document_path}/{files}.{self.extensions[files]}')
+                data_bytes = f.read()
+                print(data_bytes)
+
+
+    def magic_number_check(self):
+        for files in self.extensions:
+            with open(f'{self.document_path}/{files}.{self.extensions[files]}', 'rb') as fb:
+                raw = fb.read()
+
+            ################################################### ADD MORE EXTENSION!!!!!!!!!!!!!!!!!!
+            match (self.extensions[files]):
+                case 'docx' | 'xlsx' | 'pptx':
+                    if raw.startswith(MS_OFFICE_MAGIC):
+                        return 1
+                    # can probably add more logic here, c how i wanna settle it
+                    return 0
+                
+                # file extension not suppoerted to check
+                case _:
+                    print('end')
+
+
+    # check if file size is sussss
+    def size_check(self): 
+        for files in self.extensions:
+            print(self.extensions[files])
+            match self.extensions[files]:
+            ############################## filter out size.py and add in the cases 
+                case 'docx':
+                    if self.file_size <= DOCX_SIZE[0] or self.file_size >= DOCX_SIZE[1]:
+                        return 0
+                    return 1
+
+                # file extension not suppoerted to check
+                case _:
+                    print('end')
 
     # checking for macro
     def macro_extension_check(self):
@@ -144,7 +235,8 @@ class DocChecking(Email):
                # Will need to do further check
                 print("RISKYYYYYYYYYYYYYY")
 
-                print('macro_check')
+                # see how i wanna send back the risk data if have macro
+                self.macro_check(file_name)
 
         return
 
@@ -155,24 +247,36 @@ class DocChecking(Email):
                 return "DANGERRRRRRRRRRRRRRRRRR"
         return
 
-    # check if have any obfuscated content
-    def obfuscated_check(self):
-        for file_name in self.files:
-            with open(f'{self.document_path}/{file_name}', 'rb') as file:
-                raw = file.read()
-            content = raw.decode('utf-8', errors='ignore')
-            print(content)
-            obfuscated_content = ''.join(filter(lambda s: s not in string.printable, content))
-            print(obfuscated_content)
-############################## will need to think of a better way to check for obfuscated content...
-            if obfuscated_content != '':
-                print('SUSS')
-                return("SUSSSSSSSSSSSSSSSSS")
+#     # check if have any obfuscated content
+#     def obfuscated_check(self):
+#         for file_name in self.files:
+#             with open(f'{self.document_path}/{file_name}', 'rb') as file:
+#                 raw = file.read()
+#             content = raw.decode('utf-8', errors='ignore')
 
-        return
+#             #obfuscated_content = ''.join(filter(lambda s: s not in string.printable, content))
+# ############################## will need to think of a better way to check for obfuscated content...
+#             if obfuscated_content != '':
+#                 print('SUSS')
+#                 return("SUSSSSSSSSSSSSSSSSS")
+
+        # return
+
+    # base64 check 
+    # def base64_check(self):
+    #     base64_regex = r'(?:[A-Za-z0-9+/]{20,}={0,2})'
+
+    #     for file_name in self.files:
+    #         with open(f'{self.document_path}/{file_name}', 'r', encoding="utf-8", errors='replace') as file:
+    #             raw = file.read()
 
 
-    
+    #         import re
+    #         if re.search(base64_regex, content):
+    #             print('POTATOOOOOOO')
+
+
+   
     # always clear files after check
     def exit_check(self):
         for file_name in self.files:
@@ -181,4 +285,5 @@ class DocChecking(Email):
 checker = DocChecking("Resources/DATASET/Project Proposal.eml")
 print("\nREAL DEAL\n")
 
-checker.obfuscated_check()
+#checker.metadata_check()
+checker.block_high_risk_files()
