@@ -1,1 +1,1 @@
-from LangaugeAnalysis.main import LanguageAnalysis
+from main import LanguageAnalysis
