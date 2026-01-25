@@ -1,11 +1,11 @@
 #from .main import Email  
 from magic import *
 from size import *
-from os import listdir, remove, path
 from zipfile import ZipFile
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
 
+from os import listdir, remove, path
 from email import policy
 from email.parser import Parser, HeaderParser
 from html.parser import HTMLParser
@@ -246,35 +246,6 @@ class DocChecking(Email):
             if any("vbaProject.bin" in name for name in z.namelist()) == True:
                 return "DANGERRRRRRRRRRRRRRRRRR"
         return
-
-#     # check if have any obfuscated content
-#     def obfuscated_check(self):
-#         for file_name in self.files:
-#             with open(f'{self.document_path}/{file_name}', 'rb') as file:
-#                 raw = file.read()
-#             content = raw.decode('utf-8', errors='ignore')
-
-#             #obfuscated_content = ''.join(filter(lambda s: s not in string.printable, content))
-# ############################## will need to think of a better way to check for obfuscated content...
-#             if obfuscated_content != '':
-#                 print('SUSS')
-#                 return("SUSSSSSSSSSSSSSSSSS")
-
-        # return
-
-    # base64 check 
-    # def base64_check(self):
-    #     base64_regex = r'(?:[A-Za-z0-9+/]{20,}={0,2})'
-
-    #     for file_name in self.files:
-    #         with open(f'{self.document_path}/{file_name}', 'r', encoding="utf-8", errors='replace') as file:
-    #             raw = file.read()
-
-
-    #         import re
-    #         if re.search(base64_regex, content):
-    #             print('POTATOOOOOOO')
-
 
    
     # always clear files after check
