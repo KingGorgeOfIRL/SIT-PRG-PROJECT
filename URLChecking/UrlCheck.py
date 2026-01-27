@@ -128,8 +128,13 @@ class Email:
     def __repr__(self):
         return f"Email<Subject:{self.subject},Sender:{self.sender}>"
 
-###### IDEA??
-# each check give the URL a certain score, higher score, higher sus
+
+
+
+
+#### IDEA:
+# be able to add/remove stuff into WORDLISTS
+
 
 class UrlCheck(Email):
     def __init__(self, email_path = None):
@@ -139,6 +144,7 @@ class UrlCheck(Email):
         self.urls.append("https://example.com")
         self.urls.append("https://google.com")
         self.urls.append("http://127.0.0.1:8080/test")
+        self.urls.append("http://tinyurl.com/time0ut")
         
         self.url_score = {url: 0 for url in self.urls}
         self.connectivity:[bool] = self.__internet_check()
@@ -149,7 +155,15 @@ class UrlCheck(Email):
             return True
         except Exception as e:
             print(e)
-            return False      
+            return False   
+
+    # extract wordlist
+    # REMEMBER TO CHANGE FILE PATH
+    def extract_wordlist(self, filename=None):
+        with open(f'URLChecking/temp_wordlist/{filename}', "r", encoding="utf-8") as f:
+            wordlist = f.read().split()
+
+        return wordlist
 
     # check if is https [10]
     def ssl_check(self):
@@ -208,8 +222,8 @@ class UrlCheck(Email):
 
     # check if url is shorten [10]
     def urlShortener_check(self):
-        # wmtips.com/technologies/url-shorteners/
-        url_shorteners = ["bitly.com", "eepurl.com", "amzn.to", "t.co", "g.co", "tinyurl.com", "cutt.ly", "rebrandly.com", "linkfire.com", "fb.me", "t.ly",  "apple.co", "shorturl.com", "geniuslink.com", "short.io", "is.gd", "ow.ly", "lnkd.in", "bl.ink", "yandexclicker.ru", "tiny.cc", "t2m.io", "yourls.org", "sniply.com", "joturl.com"]
+        # wmtips.com/technologies/url-shorteners/ ################
+        wordlist = self.extract_wordlist('url_shorteners.txt')
 
         for original_url in self.urls:
 
@@ -222,7 +236,7 @@ class UrlCheck(Email):
             # remove port
             domain = url.split(":", 1)[0]
 
-            if domain in url_shorteners:
+            if domain in wordlist:
                 self.url_score[original_url] += 10
 
 
@@ -243,33 +257,17 @@ class UrlCheck(Email):
                 self.url_score[url] += 5
                 return
 
-    # detech suspicious special char [20]
+    # detect suspicious special char [20]
     def specialChar_check(self):
 
         # add more if needed
-        suspicious_chars = set('%!$*()<>{}|\\^`"\'')
+        wordlist = self.extract_wordlist('suspicious_chars.txt')
 
         for url in self.urls:
-            if any(char in suspicious_chars for char in url):
+            if any(char in wordlist for char in url):
                 self.url_score[url] += 20
         print(self.url_score)
         return
-
-    # VERY MAFAN, WILL HAVE TO DECIDE HOW I WANRT TO DO IT (DO I WANT TO USE KNOWN BRANDS? OR JUST USE ALGO TO TRY N DETECT???)
-    def spelling_check(self):
-        leet_map = {'A': ['a', '4', '@']}
-
-        for original_url in self.urls:
-
-            # remove scheme
-            url = original_url.split("://", 1)[1]
-
-            # remove path
-            url = url.split("/", 1)[0]
-            
-            # remove port
-            url = url.split(":", 1)[0]
-    # VERY MAFAN, WILL HAVE TO DECIDE HOW I WANRT TO DO IT (DO I WANT TO USE KNOWN BRANDS? OR JUST USE ALGO TO TRY N DETECT???)
 
     # @ symbol detection [30]
     def at_symbol_check(self):
@@ -292,7 +290,7 @@ class UrlCheck(Email):
     def offline_redirection_check(self):
         # https://hackmd.io/@ladieubong2004/SyGfnIWbbe
         # https://scnps.co/papers/ndss25_open_redirects.pdf (or can use this :0)
-        common_redirection_parameters = ['redirect', 'redirect_to', 'url', 'link', 'goto', 'return', 'returnTo', 'destination', 'next', 'checkout', 'checkout_url', 'continue', 'return_path', 'return_url', 'forward', 'path', 'redir', 'redirect_uri', 'view', 'img_url', 'image_url', 'load_url']
+        wordlist = self.extract_wordlist('common_redirection_parameters.txt')
 
         for url in self.urls:
 
@@ -300,28 +298,41 @@ class UrlCheck(Email):
             if '?' in url:
                 parameter = url.split('?', 1)[1]
 
-                if parameter in common_redirection_parameters:
+                if parameter in wordlist:
                     self.url_score[url] += 10
 
 
     # remember to use self.connectivity to check for internet connection first (Boolean value)
     # if it redirects user [20]
-    # def online_redirection_check(self):
-    #     for url in self.urls:
-    #         try:
-    #             response = get(url, timeout = 10)
-    #             print(response.url)
-    #             print(response.history)
-    #             if response.status_code == 301:
-    #                 print('w')
-    #         except:
-    #             print("SITE DOeSN\'t EXIST")
+    def online_redirection_check(self):
+        
+        if self.connectivity == False:
+            return
+
+        for url in self.urls:
+            try:
+                response = get(url, timeout = 10)
+                #print(response.url)
+                print(url)
+                print(response.history)
+                print('')
+                if len(response.history) != 0:
+                    print("REDIRECTION HAPPENNNNNNNNNNED")
+                    self.url_score[url] += 20
+
+            except:
+                # what should i do with this?
+                ###################################
+                print("SITE DOeSN\'t EXIST")
 
 
     # remember to use self.connectivity to check for internet connection first (Boolean value)
     # how authoritative a site is [10/20]
     # more subdomain = less
     def domain_page_rank_check(self):
+
+        if self.connectivity == False:
+            return
 
         # maybe can put this somewhere else
         API_KEY = 'swkk00k4ww4osgo4wc4wco0sogowcs0o40kg0wo0'
@@ -362,11 +373,77 @@ class UrlCheck(Email):
             # website down / no internet
             else:
                 return False
+    
+    # IDEA: load in domain into .txt file to see recently visited??
+    # online - rdap
+    # offline - predownload whois dataset
+
+    ########## figure out best way to input the domain (with schema? no subdomain?)
+    # checking domain age [20]
+    def domain_age_check(self):
+        for original_url in self.urls:
+            subdomain = None
+            placeholder = ''
+
+            # remove scheme
+            url = original_url.split("://", 1)[1]
+
+            # remove path
+            url = url.split("/", 1)[0]
+            
+            # remove port
+            domain = url.split(":", 1)[0]
+            
+            split_domain = domain.split('.')
+
+            # ensure ip address are not split
+            if len(split_domain) == 4:
+                root_domain = domain
+
+            # get its root
+            else:
+                root_domain = domain.split(".")[-2] + '.' + domain.split(".")[-1]
+
+                # get subdomain (if applicable)
+                if len(split_domain) != 2:
+                    subdomain = domain
+
+            try:
+                # try root domain
+                placeholder = root_domain
+                rdap_url = f"https://rdap.org/domain/{placeholder}"
+                rdap_output = get(rdap_url, timeout = 10)
+
+                # if root domain does not work & subdomain exist
+                if rdap_output.status_code != 200 and subdomain != None:
+                    placeholder = subdomain
+                    rdap_url = f"https://rdap.org/domain/{placeholder}"
+                    rdap_output = get(rdap_url, timeout = 10)
 
 
-    # def domain_age_check(self):
+                data = rdap_output.json()
+                
+                from datetime import datetime, timezone
+                registration_date = next(
+                    e["eventDate"] for e in data["events"]
+                    if e["eventAction"] == "registration"
+                )
 
+                # parse ISO timestamp
+                registered_at = datetime.fromisoformat(
+                    registration_date.replace("Z", "+00:00")
+                )
 
+                # calculate age
+                now = datetime.now(timezone.utc)
+                age = now - registered_at
+
+                # https://dnsrf.org/blog/phishing-attacks--newly-registered-domains-still-a-prominent-threat
+                if age.days <= 4:
+                    self.url_score[original_url] += 20
+
+            except Exception as e:
+                print(f"RDAP failed for {domain}: {e}")
 
 u = UrlCheck("Resources/DATASET/URL Checker_3.eml")
-u.online_redirection_check()
+u.domain_age_check()
