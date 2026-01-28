@@ -1,7 +1,7 @@
-﻿1	first
-10	tenth
+﻿1 first
+10 tenth
 100	hundredth
-1000	thousandth
+1000 thousandth
 1000000	millionth
 1000000000	billionth
 11	eleventh
