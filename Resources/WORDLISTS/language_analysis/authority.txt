@@ -1,0 +1,19 @@
+Please process payment urgently, 14.0  
+Urgent request from CEO, 14.0  
+Revalidate your mailbox, 13.0  
+Microsoft 365 Team, 12.0  
+Your system administrator, 12.0  
+Compliance department, 12.0  
+Security department, 12.0  
+Do not share this request, 12.0  
+IT Helpdesk, 12.0  
+Admin Team, 11.0  
+From your HR manager, 12.0  
+Internal IT support, 12.0  
+account, 20.0  
+bank, 20.0  
+security, 20.0  
+support, 20.0  
+administrator, 10.0  
+official, 5.0  
+service, 5.0

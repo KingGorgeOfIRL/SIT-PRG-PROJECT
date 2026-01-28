@@ -1,0 +1,19 @@
+Your account has been suspended, 13.0  
+Your account is at risk, 13.0  
+Suspicious login detected, 11.0  
+Unauthorized access detected, 11.0  
+We noticed unusual activity, 11.0  
+Account deactivation warning, 11.0  
+Your session has timed out, 9.0  
+You’ve won a gift card, 12.0  
+Congratulations! You’ve been selected, 11.0  
+Claim your prize, 11.0  
+Your refund is ready, 11.0  
+Tax refund available, 10.0  
+Reimbursement issued, 9.0  
+gift card, 20.0  
+expired, 20.0  
+renew now, 15.0  
+declined, 20.0  
+invoice, 15.0  
+compromised, 10.0
