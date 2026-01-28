@@ -1,0 +1,14 @@
+Immediate action required, 17.0  
+Take action within 24 hours, 16.0  
+Urgent, 16.0  
+Final notice, 15.0  
+Password expires today, 14.0  
+Your mailbox is almost full, 13.0  
+Last warning, 15.0  
+Act now, 13.0  
+Attention required, 12.0  
+Priority update, 12.0  
+immediately, 15.0  
+important, 20.0  
+alert, 15.0  
+now, 15.0
