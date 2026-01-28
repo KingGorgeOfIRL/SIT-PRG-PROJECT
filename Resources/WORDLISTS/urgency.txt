@@ -1,0 +1,17 @@
+Action required
+Immediate action required
+Urgent
+High importance
+Final notice
+Last warning
+Your account will be suspended
+Your account will be terminated
+Your account will be disabled
+Unusual sign-in attempt
+Suspicious activity detected
+Security alert
+Critical security update
+Risk detected
+Mailbox full 
+Storage limit reached 
+Delivery pending
