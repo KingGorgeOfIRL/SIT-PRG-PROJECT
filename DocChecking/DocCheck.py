@@ -2,6 +2,7 @@
 from magic import *
 from size import *
 from zipfile import ZipFile
+from time import time
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
 
@@ -39,6 +40,7 @@ class Email:
         self.text:str = extract[0]
         self.attachment_header = extract[1]
         self.raw = extract[2]
+        self.urls = extract[3]
         self.subject:str = headers['Subject'] 
         self.sender:str = headers['From'] 
         self.headers:dict = headers 
@@ -48,10 +50,11 @@ class Email:
         with open(self.email_path,'r') as file:
             raw = Parser(policy=policy.default).parse(file)
         attachment_header = []
+        urls = []
         plain_text:str = None
         for part in raw.walk():
             if part.is_attachment():
-                print("attachment found",part.get('Content-Disposition'))
+                # print("attachment found",part.get('Content-Disposition'))
                 if "base64" in part.get("Content-Transfer-Encoding"):
                     attachment_header.append(self.__bs64_save_attachments(part.get_payload(),part.get('Content-Disposition')))
                 else:
@@ -60,8 +63,35 @@ class Email:
                 plain_text = str(part.get_payload(decode=True))
             elif 'text/html' in part.get('Content-Type'):
                 plain_text = strip_tags(str(part.get_payload(decode=True).decode("utf-8")))
-        
-        return plain_text,attachment_header,raw
+                html_content = part.get_payload(decode=True).decode("utf-8", errors="ignore")
+
+                ################################## pick which method is better
+                # extract urls - method 1
+                # if "href=" in html_content.lower():
+                #     import re
+                #     urls = re.findall(r'href=["\'](.*?)["\']', html_content)
+
+                #     print(urls)
+
+                # extract urls - method 2
+                if "href=" in html_content.lower():
+                    urls = []
+
+                    start = 0
+                    while True:
+                        href_pos = html_content.find('href="', start)
+                        if href_pos == -1:
+                            break
+
+                        href_pos += len('href="')
+                        end_pos = html_content.find('"', href_pos)
+
+                        urls.append(html_content[href_pos:end_pos])
+                        start = end_pos
+
+                    #print(urls)
+                        
+        return plain_text,attachment_header,raw,urls
     
     #extract all email headers as a dictionary
     def __extract_headers(self):
@@ -115,62 +145,65 @@ class DocChecking(Email):
         super().__init__(email_path)
 
         self.document_path:str = 'Resources/TEMP_FILES'
-        self.files:list[str] = self._get_files()
-        self.extensions: dict[str, str] = self._extension_extraction()
+        self.files:list[str] = self.__get_files()
+        self.extensions: dict[str, str] = self.__extension_extraction()
         self.file_size:int = (int(self.attachment_header[0]['size=']) / 1024) # convert to bytes
-        self.creation_date_epoch:int = self._date_extraction()[0]
-        self.modified_date_epoch:int = self._date_extraction()[1]
+        self.metadata_date:dict = self.__date_extraction()
+        self.file_score = {filename: 0 for filename in self.files}
 
-
-    def _get_files(self):
+    # return all files in TEMP_FILES
+    def __get_files(self):
         if not path.exists(self.document_path):
+            # no files
             return []
         else:
             # returns list of file names
             return [name for name in listdir(self.document_path) if path.isfile(path.join(self.document_path, name))]
 
-    def _extension_extraction(self):
+    # extract & check for multiple extension as well [20]
+    def __extension_extraction(self):
         extensions = {}
+        risk_score = 0
 
         for file_name in self.files:
             file_split = file_name.split('.')
-            if len(file_split) > 2:
-                # Placeholder risk flag
-                print("RISKYYYYYYY")
 
-            extensions[file_split[0]] = file_split[-1]
+            if len(file_split) > 2:
+                self.file_score[file_name] += 20
+
+            extensions[file_name] = file_split[-1]
 
         return extensions
-
     
     # depending on the email class dk if it will have multiple
-    def _date_extraction(self):
-        creation_date_epoch = self.to_epoch_time(self.attachment_header[0]['creation-date='])
-        modified_date_epoch = self.to_epoch_time(self.attachment_header[0]['modification-date='])
-        return [creation_date_epoch, modified_date_epoch]
+    def __date_extraction(self):
+        metadata_dates = {filename: 0 for filename in self.files}
 
-    # blocks executables
-    def block_high_risk_files(self):
-        BLOCKED_EMAIL_EXTENSIONS = ["exe", "com", "bat", "cmd", "scr", "pif", "js", "jse", "vbs", "vbe", "wsf", "wsh", "ps1", "psm1", "msi", "msp", "dll", "sys", "cpl","jar", "iso", "img", "apk"]
-        
-        for files in self.extensions:
-            if self.extensions[files] in BLOCKED_EMAIL_EXTENSIONS:
-                print("BLOCKEDDDDDD")
-                return 0
-            return 1
+        for file_entry in self.attachment_header:
+            filename = file_entry['filename=']
 
-    ################################### see if the logic make sense... or can add more when it comes to mind
-    def metadata_check(self):
-        epoch_time = int(time.time())
+            creation_date_epoch = self.to_epoch_time(
+                file_entry['creation-date=']
+            )
 
-        if self.creation_date_epoch == self.modified_date_epoch:
-            print("SUSSSSSSSSSSSSSSSSSSSSSSS")
-            return
-        
-        elif self.creation_date_epoch >= epoch_time or self.modified_date_epoch >= epoch_time:
-            print("SUSSSSSSSSSSSSSSSSSSSSSSS")
-            return
+            modified_date_epoch = self.to_epoch_time(
+                file_entry['modification-date=']
+            )
 
+            metadata_dates[filename] = {
+                "creation": creation_date_epoch,
+                "modified": modified_date_epoch
+            }
+
+        return metadata_dates
+
+    # extract wordlist
+    # REMEMBER TO CHANGE FILE PATH
+    def extract_wordlist(self, filename=None):
+        with open(f'DocChecking/temp_wordlist/{filename}', "r", encoding="utf-8") as f:
+            wordlist = f.read().split()
+
+        return wordlist
 
     # convert date string to epoch (metadata check)
     def to_epoch_time(self, date: str):
@@ -183,15 +216,37 @@ class DocChecking(Email):
 
         return int(dt_utc.timestamp())
 
-    # checks first few bytes to confirm extension
-    def extension_check(self):
+    # blocks executables [100%]
+    def block_high_risk_files(self):
+
+        wordlist = self.extract_wordlist('high_risk_extensions.txt')
+        
         for files in self.extensions:
-            with open(f'{self.document_path}/{files}.{self.extensions[files]}', 'rb') as f:
-                print(f'{self.document_path}/{files}.{self.extensions[files]}')
-                data_bytes = f.read()
-                print(data_bytes)
+            # high risk extension detected
+            if self.extensions[files] in wordlist:
+                self.file_score[files] += 1000000 # change to max score
 
+        return True
 
+    # check metadata dates [30]
+    def metadata_check(self):
+
+        for file_name in self.metadata_date:
+
+            epoch_time = int(time())
+
+            if self.metadata_date[file_name]['creation'] == self.metadata_date[file_name]['modified']:
+                self.file_score[files] += 30
+
+            elif self.metadata_date[file_name]['creation'] >= epoch_time or self.metadata_date[file_name]['modified'] >= epoch_time:
+                self.file_score[files] += 30
+
+        return False
+
+    #########################################################################################################
+    #########################################################################################################
+    #########################################################################################################
+    # checks first few bytes to confirm extension [20]
     def magic_number_check(self):
         for files in self.extensions:
             with open(f'{self.document_path}/{files}.{self.extensions[files]}', 'rb') as fb:
@@ -201,7 +256,7 @@ class DocChecking(Email):
             match (self.extensions[files]):
                 case 'docx' | 'xlsx' | 'pptx':
                     if raw.startswith(MS_OFFICE_MAGIC):
-                        return 1
+                        return 20
                     # can probably add more logic here, c how i wanna settle it
                     return 0
                 
@@ -209,8 +264,10 @@ class DocChecking(Email):
                 case _:
                     print('end')
 
-
-    # check if file size is sussss
+    #########################################################################################################
+    #########################################################################################################
+    #########################################################################################################
+    # check if file size is suspicious [10]
     def size_check(self): 
         for files in self.extensions:
             print(self.extensions[files])
@@ -225,27 +282,32 @@ class DocChecking(Email):
                 case _:
                     print('end')
 
-    # checking for macro
+    # checking for macro [10]
     def macro_extension_check(self):
-        macro_extension = ['docm', 'xlsm', 'pptm', 'dotm']
 
+        wordlist = self.extract_wordlist('macro_extensions.txt')
+        
         for file_name in self.extensions:
-            if self.extensions[file_name] in macro_extension:
-               ################################ change after done with risk score stuff
-               # Will need to do further check
-                print("RISKYYYYYYYYYYYYYY")
+            if self.extensions[file_name] in wordlist:
+                self.file_score[file_name] += 10
 
-                # see how i wanna send back the risk data if have macro
-                self.macro_check(file_name)
+                # check if macro exist in file
+                macro_exist = self.macro_check(file_name)
 
-        return
+                if macro_exist:
+                    self.file_score[file_name] += 50
 
+        return True
+
+    # check if macro file contains macro [50]
     def macro_check(self, file_name):
+
         # will usually contain vbaProject.bin
-        with ZipFile(file_name) as z:
+        with ZipFile(f"{self.document_path}/{file_name}") as z:
             if any("vbaProject.bin" in name for name in z.namelist()) == True:
-                return "DANGERRRRRRRRRRRRRRRRRR"
-        return
+                return True
+
+        return False
 
    
     # always clear files after check
@@ -253,8 +315,19 @@ class DocChecking(Email):
         for file_name in self.files:
             remove(f"{self.document_path}/{file_name}")
 
-checker = DocChecking("Resources/DATASET/Project Proposal.eml")
-print("\nREAL DEAL\n")
+    def run_all_checks(self):
+        self.block_high_risk_files()
+        self.metadata_check()
+        self.magic_number_check()
+        self.size_check()
+        self.macro_extension_check()
+
+        self.exit_check()
+
+        return 'xxx'
+
+
+checker = DocChecking("Resources/DATASET/DocsCheck_2.eml")
 
 #checker.metadata_check()
-checker.block_high_risk_files()
+checker.macro_extension_check()
