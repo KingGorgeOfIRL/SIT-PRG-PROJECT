@@ -47,7 +47,6 @@ class Email:
         plain_text:str = None
         for part in raw.walk():
             if part.is_attachment():
-                print("attachment found",part.get('Content-Disposition'))
                 if "base64" in part.get("Content-Transfer-Encoding"):
                     attachment_header.append(self.__bs64_save_attachments(part.get_payload(),part.get('Content-Disposition')))
                 else:

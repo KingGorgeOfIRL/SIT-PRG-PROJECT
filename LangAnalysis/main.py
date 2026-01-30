@@ -1,12 +1,15 @@
 import os
+from typing import Dict, List, Union, Optional,Tuple,Any
 from email import policy
-from email.parser import Parser, HeaderParser
+from email import policy
+from email.parser import BytesParser
+from email.message import Message
 from html.parser import HTMLParser
 from io import StringIO
 import base64
 import re
 
-class MLStripper(HTMLParser):
+class _MLStripper(HTMLParser):
     def __init__(self):
         super().__init__()
         self.reset()
@@ -20,157 +23,246 @@ class MLStripper(HTMLParser):
     def get_data(self):
         return self.text.getvalue()
 
-def strip_tags(html):
-    s = MLStripper()
+def _strip_tags(html):
+    s = _MLStripper()
     s.feed(html)
     return s.get_data()
 
+def _decode_part_bytes(part: Message, default_charset: str = "utf-8") -> str:
+    """
+    Decode a text/* MIME part to a Unicode string using declared charset
+    (fallback to utf-8 with errors ignored).
+    """
+    payload = part.get_payload(decode=True)
+    if payload is None:
+        return ""
+
+    charset = part.get_content_charset() or default_charset
+    try:
+        return payload.decode(charset, errors="ignore")
+    except LookupError:
+        # Unknown charset -> fallback
+        return payload.decode(default_charset, errors="ignore")
+
+def _extract_hrefs_from_html(html: str) -> List[str]:
+    #Extract href targets from HTML using a regex (lightweight, not a full HTML parser).
+    # Handles href="..." and href='...'
+    return re.findall(r"""href\s*=\s*['"]([^'"]+)['"]""", html, flags=re.IGNORECASE)
+
+def _safe_filename(name: str, default: str = "attachment.bin") -> str:
+    #Prevent directory traversal and strip unsafe characters.
+    if not name:
+        return default
+    name = os.path.basename(name)
+    # Replace anything sketchy with underscore
+    name = re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("._")
+    return name or default
+
 class Email:
-    #performs all default feild extractions
-    def __init__(self,email_path:str):
-        self.email_path:str = email_path
-        headers = self.__extract_headers()
-        extract = self.__extract_body()
-        self.text:str = extract[0]
-        self.attachment_header = extract[1]
-        self.raw = extract[2]
-        self.subject:str = headers['Subject'] 
-        self.sender:str = headers['From'] 
-        self.headers:dict = headers 
-        
-    #extracts all body text free of HTML tags
-    def __extract_body(self):
-        with open(self.email_path,'r') as file:
-            raw = Parser(policy=policy.default).parse(file)
-        attachment_header = []
-        plain_text:str = None
-        for part in raw.walk():
-            if part.is_attachment():
-                print("attachment found",part.get('Content-Disposition'))
-                if "base64" in part.get("Content-Transfer-Encoding"):
-                    attachment_header.append(self.__bs64_save_attachments(part.get_payload(),part.get('Content-Disposition')))
-                else:
-                    print("cannot save file. not the right encoding")
-            elif 'text/plain' in part.get('Content-Type'):
-                plain_text = str(part.get_payload(decode=True))
-            elif 'text/html' in part.get('Content-Type'):
-                plain_text = strip_tags(str(part.get_payload(decode=True).decode("utf-8")))
-                html_content = part.get_payload(decode=True).decode("utf-8", errors="ignore")
+    def __init__(
+        self,
+        email_path: str,
+        attachment_output_path: str = "LanguageAnalysis/Resources/TEMP_FILES",
+    ):
+        self.email_path: str = email_path
+        self.attachment_output_path: str = attachment_output_path
 
-                ################################## pick which method is better
-                # extract urls - method 1
-                # if "href=" in html_content.lower():
-                #     import re
-                #     urls = re.findall(r'href=["\'](.*?)["\']', html_content)
+        # Parse full message
+        self.raw: Message = self.__parse_eml()
 
-                #     print(urls)
+        # Extract headers dict safely
+        self.headers: Dict[str, str] = self.__extract_headers(self.raw)
 
-                # extract urls - method 2
-                if "href=" in html_content.lower():
-                    urls = []
+        self.subject: str = self.headers.get("Subject", "") or ""
+        self.sender: str = self.headers.get("From", "") or ""
 
-                    start = 0
-                    while True:
-                        href_pos = html_content.find('href="', start)
-                        if href_pos == -1:
-                            break
+        # Extract body + attachments + urls
+        self.text, self.attachment_header, self.urls = self.__extract_body(self.raw)
+   
+    def __parse_eml(self) -> Message:
+        #Parse the EML file in binary mode using BytesParser.
+        with open(self.email_path, "rb") as f:
+            return BytesParser(policy=policy.default).parse(f)
 
-                        href_pos += len('href="')
-                        end_pos = html_content.find('"', href_pos)
-
-                        urls.append(html_content[href_pos:end_pos])
-                        start = end_pos
-
-                    #print(urls)
-                        
-        return plain_text,attachment_header,raw
+    def __extract_headers(self, msg: Message) -> Dict[str, str]:
+        #Convert message headers into a plain dict.
+        out: Dict[str, str] = {}
+        for k, v in msg.items():
+            out[k] = str(v)
+        return out
     
-    #extracts all headerfields from eml headers
-    def __extract_headers(self):
-        with open(self.email_path,'r') as file:
-            raw = HeaderParser().parse(file)
-        raw_dict = {}
-        for item in raw.items():
-            raw_dict[item[0]] = item[1]
-        return raw_dict
-    
-    def __bs64_save_attachments(self,base64str:str,header_data:str,output_path:str="LangaugeAnalysis/Resources/TEMP_FILES"):
-        meta_data:dict = {}
-        name = "temp_file"
+    def __save_attachment(self, part: Message) -> Optional[Dict[str, Any]]:
+        """
+        Save an attachment part to disk and return metadata.
+        Uses decoded bytes rather than manually handling base64 strings.
+        """
+        os.makedirs(self.attachment_output_path, exist_ok=True)
 
-        #extracts Meta-Data
-        for field in str(header_data).split('; '):
-            if '=' not in field:
+        raw_bytes = part.get_payload(decode=True)
+        if raw_bytes is None:
+            return None
+
+        filename = _safe_filename(part.get_filename() or "attachment.bin")
+        out_path = os.path.join(self.attachment_output_path, filename)
+
+        # Write bytes to file
+        with open(out_path, "wb") as f:
+            f.write(raw_bytes)
+
+        # Minimal metadata
+        meta: Dict[str, Any] = {
+            "filename": filename,
+            "content_type": part.get_content_type(),
+            "content_disposition": part.get_content_disposition(),
+            "size_bytes": len(raw_bytes),
+            "saved_to": out_path,
+        }
+
+        # Include any useful Content-Disposition params (e.g., name=)
+        try:
+            params = part.get_params(header="content-disposition", failobj=[])
+            if params:
+                meta["content_disposition_params"] = dict(params)
+        except Exception:
+            pass
+
+        return meta
+    
+    def __extract_body(self, msg: Message) -> Tuple[str, List[Dict[str, Any]], List[str]]:
+        """
+        Extract best-effort plain text body, save attachments, and collect URLs.
+        Prefers text/plain; falls back to text/html if needed.
+        """
+        attachments: List[Dict[str, Any]] = []
+        urls: List[str] = []
+
+        plain_parts: List[str] = []
+        html_parts: List[str] = []
+
+        # Walk over MIME structure
+        for part in msg.walk():
+            if part.is_multipart():
                 continue
-            field = field.split('"')
-            meta_data[field[0]] = field[1]
-            if "name" in field[0]:
-                name = field[1]
-        
-        #removes Mime Header
-        if "," in base64str:
-            base64str = base64str.split(",", 1)[1]
-        
-        #writes bytes to file
-        file_bytes = base64.b64decode(base64str)
-        with open(f"{output_path}/{name}", "wb") as f:
-            f.write(file_bytes)
-        return meta_data
 
+            ctype = part.get_content_type()
+            cdisp = part.get_content_disposition()  # "attachment", "inline", or None
+
+            # Attachments: anything explicitly marked attachment OR has filename
+            filename = part.get_filename()
+            if cdisp == "attachment" or filename:
+                meta = self.__save_attachment(part)
+                if meta:
+                    attachments.append(meta)
+                continue
+
+            # Body text extraction
+            if ctype == "text/plain":
+                plain_parts.append(_decode_part_bytes(part))
+            elif ctype == "text/html":
+                html = _decode_part_bytes(part)
+                html_parts.append(html)
+                urls.extend(_extract_hrefs_from_html(html))
+
+        # Prefer plaintext if available, otherwise use HTML->text
+        if plain_parts:
+            body_text = "\n".join(p for p in plain_parts if p).strip()
+        else:
+            combined_html = "\n".join(h for h in html_parts if h).strip()
+            body_text = _strip_tags(combined_html) if combined_html else ""
+
+        return body_text, attachments, urls
+    
     def __repr__(self):
         return f"Email<Subject:{self.subject},Sender:{self.sender}>"
 
-#converts txt to data structure 
-def init_file(path:str, conv_to_list:bool=False,inverse=False,encoding=None):
-    output_dir = {}
-    output_list = []
-    with open(path,'r',encoding=encoding) as file:
-        for line in file:
-            if ',' in line:
-                line = line.split(',')
-            else:
-                line = line.split()
-            
+def init_file(
+    path: str,
+    conv_to_list: bool = False,
+    inverse: bool = False,
+    encoding: Optional[str] = "utf-8"
+    ) -> Union[Dict[str, Union[str, float]], List[List[str]]]:
+    
+    #Load a keyword file and convert it into a structured data format.
+
+    output_dict: Dict[str, Union[str, float]] = {}
+    output_list: List[List[str]] = []
+
+    with open(path, "r", encoding=encoding) as file:
+        for raw_line in file:
+            line = raw_line.strip()
+
+            # Skip empty or comment lines
+            if not line or line.startswith("#"):
+                continue
+            # Split line into fields
+            parts = [p.strip() for p in (line.split(",") if "," in line else line.split())]
             if conv_to_list:
-                output_list.append(line)
+                output_list.append(parts)
+                continue
+
+            # Dictionary mode requires exactly two fields
+            if len(parts) != 2:
+                continue  # malformed line; ignore safely
+            key, value = parts
+            
+            # Attempt numeric conversion
+            try:
+                value = int(value)
+            except ValueError:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass  # keep as string
+            if inverse:
+                output_dict[str(value)] = key
             else:
-                if inverse:
-                    output_dir[line[1]] = line[0]
-                else:
-                    output_dir[line[0]] = line[1]
+                output_dict[key] = value
 
-    if conv_to_list:
-        return output_list
-    else:
-        return output_dir
+    return output_list if conv_to_list else output_dict
 
-def WordList_lemmatizer(word:str,wordlist={}):
-    if word in wordlist:
-        result = wordlist[word]
-    else:
-        result = word
-    return result
+def WordList_lemmatizer(word: str, wordlist: Optional[Dict[str, str]] = None) -> str:
+    #Perform brute-force lemmatization using a lookup table
+    if not wordlist:
+        return word
+    return wordlist.get(word, word)
 
-def printable(string:str):
+def printable(string:str) -> bool:
     return string.isprintable()
 
-#strips, simplifies and tokenise words through a brute force of a lemmatizer word list
-def tokenise(text:str):
-    tokenised = []
-    lines = text.split('\n')
-    wordlist = init_file(path="Resources/WORDLISTS/tokenisation/lemmatization-en.txt",inverse=True,encoding="utf-8-sig")
-    for line in lines:
-        word_line = []
-        line = list(filter(printable,line.split()))
-        for word in line:
-            word = re.sub('[^A-Za-z0-9]+', '', word)
-            word_line.append(WordList_lemmatizer(word.lower(),wordlist=wordlist))
+_LEMMATIZER_WORDLIST: Optional[Dict[str, str]] = None
+
+def _get_lemmatizer_wordlist() -> Dict[str, str]:
+    #Load and cache the lemmatization wordlist once.
+    global _LEMMATIZER_WORDLIST
+    if _LEMMATIZER_WORDLIST is None:
+        _LEMMATIZER_WORDLIST = init_file(
+            path="Resources/WORDLISTS/tokenisation/lemmatization-en.txt",
+            inverse=True,
+            encoding="utf-8-sig"
+        )
+    return _LEMMATIZER_WORDLIST
+
+def tokenise(text: str) -> List[List[str]]:
+    #Strip, simplify, and tokenise text using a brute-force wordlist lemmatizer.
+    tokenised: List[str] = []
+    wordlist = _get_lemmatizer_wordlist()
+
+    for raw_line in text.split("\n"):
+        words = filter(printable, raw_line.split())
+        word_line: List[str] = []
+        for word in words:
+            cleaned = re.sub(r"[^A-Za-z0-9]+", "", word).lower()
+            if not cleaned:
+                continue
+            lemma = WordList_lemmatizer(cleaned, wordlist)
+            word_line.append(lemma)
         if word_line:
-            tokenised.append(word_line)
-    if len(tokenised) == 1:
-        return word_line
-    else:
-        return tokenised
+            if tokenised:
+                tokenised.append(word_line)
+            else:
+                tokenised = word_line
+
+    return tokenised
 
 def increment_frequncy(frequency:dict,item):
     if item in frequency:
@@ -179,108 +271,141 @@ def increment_frequncy(frequency:dict,item):
         frequency[item] =1
     return frequency
 
-#initiates flag probability matrix from keyword folder by walking though all txt files in folder
-def init_keyword_matrix(keyword_folder_path:str="Resources/WORDLISTS/language_analysis"):
-    matrix = {}
-    for (dirpath,dirname,filenames) in os.walk(keyword_folder_path):
+def init_keyword_matrix(
+    keyword_folder_path:str="Resources/WORDLISTS/language_analysis"
+    ) -> Dict[str, Dict[str, float]]:
+    """
+    Load keyword probability models from a directory of text files.
+    Each file represents a risk flag category.
+    """
+    matrix: Dict[str, Dict[str, float]] = {}
+    for dirpath, _, filenames in os.walk(keyword_folder_path):
         for filename in filenames:
-            name = filename.split('.')[0]
-            keywords = init_file(os.path.join(dirpath,filename))
-            temp_dict = {}
-            for key in keywords:
-                temp_key = " ".join(tokenise(key))
-                temp_dict[temp_key] = float(keywords[key])
-            matrix[name] = temp_dict
+            flag_name = filename.rsplit(".", 1)[0]
+            keywords = init_file(os.path.join(dirpath, filename))
+            
+            flag_keywords: Dict[str, float] = {}
+            
+            for key, value in keywords.items():
+                # Tokenise keyword/keyphrase and normalise to space-separated form
+                tokenised_key = tokenise(key)
+                normalised_key = " ".join(tokenised_key)
+
+                # Store probability as float
+                flag_keywords[normalised_key] = float(value)
+
+            matrix[flag_name] = flag_keywords
     return matrix
 
-#total language risk score
-def email_language_risk(email:Email=None,body=None,title=None,matrix={},total_weightage:int=40,base_confidence_score:int = 100):
+def email_language_risk(
+    email: Optional["Email"] = None,
+    body: Optional[str] = None,
+    title: Optional[str] = None,
+    matrix: Optional[Dict[str, Dict[str, float]]] = None,
+    total_weightage: int = 40,base_confidence_score: int = 100
+) -> Dict[str, float]:
+    """
+    Calculate per-flag language risk scores for an email.
+    """
+
+    if matrix is None:
+        raise ValueError("Keyword matrix must be provided")
     if email:
-        text = email.text
-        subject = email.subject
-    else:
-        text = body
-        subject = title
-    text = tokenise(f"{subject}\n{text}")
-    risk_scores = {}
-    #hardcoded values - to be replaced
+        subject, body = email.subject, email.text
+    tokens = tokenise(f"{title or subject}\n{body or ''}")
+
     weight_multiplier = {
-        0 : 1.4,
-        1 : 1.3,
-        3 : 1.2,
-        5 : 1.1,
+        0: 1.4,
+        1: 1.3,
+        3: 1.2,
+        5: 1.1,
         8: 1.0
     }
 
-    #determines probability of each flag in the matrix and multiplies it with the weightages of each line
-    flag_weight = total_weightage / len(matrix.keys())
-    for flag in matrix:
-        frequency = {}
-        keywords = matrix[flag]
-        line_weight = weight_multiplier[0]
-        flag_prob = 0
-        
-        for line in text:
-            prob,frequency = detect_prob(line,keywords,frequency)
+    weight_keys = sorted(weight_multiplier.keys())
+    flag_weight = total_weightage / len(matrix)
+    risk_scores: Dict[str, float] = {}
+
+    for flag, keywords in matrix.items():
+        frequency: Dict[str, int] = {}
+        flag_prob = 0.0
+
+        for idx, line in enumerate(tokens):
+            prob, frequency = detect_prob(line, keywords, frequency)
             if prob > 0:
-                if text.index(line) in weight_multiplier:
-                    line_weight = weight_multiplier[text.index(line)]
-                flag_prob += prob * line_weight
+                applicable_weight = next(
+                    (weight_multiplier[k] for k in reversed(weight_keys) if idx >= k),
+                    1.0
+                )
+                flag_prob += prob * applicable_weight
+        flag_prob = min(flag_prob, 100)
 
-        #calculates the counter-balances (confidence score) the flag probability
-        confidence_score = base_confidence_score - calc_confidence(frequency,keywords)
+        confidence_penalty = calc_confidence(frequency, keywords)
+        confidence_score = max(base_confidence_score - confidence_penalty, 0)
 
-        #total text length modifier
-        if len(text) < 300:
-            length_modifier = 1.2
-        else:
-            length_modifier = 1
+        length_modifier = 1.2 if len(tokens) < 300 else 1.0
 
-        if flag_prob > 100:
-            flag_prob = 100
+        risk_scores[flag] = round(
+            flag_weight
+            * (flag_prob / 100)
+            * (confidence_score / 100)
+            * length_modifier,
+            2
+        )
 
-        risk_scores[flag] = round(flag_weight * (flag_prob/100) * (confidence_score/100) * length_modifier,2)
     return risk_scores
 
-#subtracts word probability distribution of flagged words from the risk scores 
-def calc_confidence(data:dict,model:dict):
-    #probibility of all data points
-    frequency = {}
-    total_occurances = sum(data.values())
-    for item in data:
-        frequency[item] = data[item]/total_occurances * 100
+def calc_confidence(
+    observed: Dict[str, int],
+    model: Dict[str, float]
+    ) -> float:
+    """
+    Computes confidence penalty using L1 distance between
+    observed keyword distribution and model probabilities.
+    """
+    if not observed:
+        return 0.0
+    total = sum(observed.values())
+    if total == 0:
+        return 0.0
+    penalty = 0.0
+    for key, count in observed.items():
+        if count <= 3:
+            continue
+        observed_pct = (count / total) * 100
+        expected_pct = model.get(key, 0)
+        penalty += abs(expected_pct - observed_pct)
+    return penalty
 
-    #sum of delta of probability of datapoints and risk scores
-    diff = 0
-    for item in frequency:
-        if data[item] > 3:
-            diff += ((model[item] - frequency[item]) ** 2) ** 0.5
-    return diff
+def detect_prob(
+    tokens: list,keywords: Dict[str, float],
+    frequency: Optional[Dict[str, int]] = None
+    ) -> Tuple[float, Dict[str, int]]:
+    """
+    Detect keyword and keyphrase probabilities using
+    greedy longest-match-first scanning.
+    """
+    if frequency is None:
+        frequency = {}
+    probability = 0.0
+    max_phrase_len = max(len(k.split()) for k in keywords)
+    keyword_set = set(keywords)
 
-#calculates probability of the text matching the flag and the frequency of keywords/phrases
-#iteratively checks each word and subsequent words for matches to keywords or phrases
-def detect_prob(text:list,keywords:dict,frequency:dict={}):
-    probability = 0
-    max_phrase = ""
-    for key in keywords.keys():
-        if len(key.split()) > len(max_phrase.split()):
-            max_phrase = key
-
-    for index in range(len(text)):
-        #check of individual keywords
-        if text[index] in keywords.keys():
-            probability += keywords[text[index]]
-            frequency = increment_frequncy(frequency,text[index])
-        else:
-            #check of keyphrases
-            for length in range(1,len(max_phrase.split())+1):
-                words = text[index:index+length]
-                if len(words) > 1:
-                    phrase_list = " ".join(words)
-                    if phrase_list in keywords.keys():
-                        probability += keywords[phrase_list]
-                        frequency = increment_frequncy(frequency,phrase_list)
+    i = 0
+    while i < len(tokens):
+        matched = False
+        for length in range(min(max_phrase_len, len(tokens) - i), 0, -1):
+            phrase = " ".join(tokens[i:i + length])
+            if phrase in keyword_set:
+                probability += keywords[phrase]
+                frequency[phrase] = frequency.get(phrase, 0) + 1
+                i += length
+                matched = True
+                break
+        if not matched:
+            i += 1
     return probability, frequency
+
 
 normal = "Resources/DATASET/story.eml"
 malic_sub = "Payment Declined – Urgent Request from Finance Team"
@@ -290,7 +415,9 @@ Hello,
 Your recent invoice payment was declined due to a billing error. Please download the attached file and follow the instructions to update your account immediately.
 
 If we do not receive your confirmation within 24 hours, your account may be flagged for non-compliance and subject to temporary suspension.
+    otential double-counting of overlapping phrases
 
+If you want, next steps could incl
 For your protection, do not share this message externally.
 
 Best regards,
@@ -300,6 +427,6 @@ Internal IT Support
 mail = Email(normal)
 #scores = email_language_risk(email=mail)
 matrix = init_keyword_matrix()
-scores = email_language_risk(body=malic,title=malic_sub,matrix=matrix)
+scores = email_language_risk(mail,matrix=matrix)
 print(scores)
 
