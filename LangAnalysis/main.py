@@ -312,7 +312,9 @@ def email_language_risk(
         raise ValueError("Keyword matrix must be provided")
     if email:
         subject, body = email.subject, email.text
-    tokens = tokenise(f"{title or subject}\n{body or ''}")
+    else:
+        subject = title
+    tokens = tokenise(f"{subject}\n{body or ''}")
 
     weight_multiplier = {
         0: 1.4,
@@ -405,28 +407,3 @@ def detect_prob(
         if not matched:
             i += 1
     return probability, frequency
-
-
-normal = "Resources/DATASET/story.eml"
-malic_sub = "Payment Declined – Urgent Request from Finance Team"
-malic = """
-Hello,
-
-Your recent invoice payment was declined due to a billing error. Please download the attached file and follow the instructions to update your account immediately.
-
-If we do not receive your confirmation within 24 hours, your account may be flagged for non-compliance and subject to temporary suspension.
-    otential double-counting of overlapping phrases
-
-If you want, next steps could incl
-For your protection, do not share this message externally.
-
-Best regards,
-Compliance Department
-Internal IT Support
-"""
-mail = Email(normal)
-#scores = email_language_risk(email=mail)
-matrix = init_keyword_matrix()
-scores = email_language_risk(mail,matrix=matrix)
-print(scores)
-
