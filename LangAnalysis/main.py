@@ -416,4 +416,6 @@ def detect_prob(
             i += 1
     return probability, frequency
 
-print(tokenise("Running!!!\nHello, WORLD"))
+if __name__ == "__main__":
+    from testcases import *
+    unittest.main(verbosity=2)
