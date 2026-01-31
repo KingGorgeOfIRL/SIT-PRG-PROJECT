@@ -1,1 +1,0 @@
-MS_OFFICE_MAGIC = b"PK\x03\x04"

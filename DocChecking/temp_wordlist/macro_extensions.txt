@@ -2,4 +2,3 @@ docm
 xlsm
 pptm
 dotm
-pdf

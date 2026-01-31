@@ -1,7 +1,9 @@
 #from .main import Email  
-from magic import *
-from size import *
+from socket import create_connection
 from zipfile import ZipFile
+from json import dumps, loads
+from struct import unpack
+from vtapi3 import VirusTotalAPIFiles, VirusTotalAPIAnalyses
 from time import time
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
@@ -145,6 +147,7 @@ class DocChecking(Email):
         super().__init__(email_path)
 
         self.document_path:str = 'Resources/TEMP_FILES'
+        self.connectivity:[bool] = self.__internet_check()
         self.files:list[str] = self.__get_files()
         self.extensions: dict[str, str] = self.__extension_extraction()
         self.file_size:int = (int(self.attachment_header[0]['size=']) / 1024) # convert to bytes
@@ -163,7 +166,6 @@ class DocChecking(Email):
     # extract & check for multiple extension as well [20]
     def __extension_extraction(self):
         extensions = {}
-        risk_score = 0
 
         for file_name in self.files:
             file_split = file_name.split('.')
@@ -197,6 +199,14 @@ class DocChecking(Email):
 
         return metadata_dates
 
+    def __internet_check(self):
+        try:
+            create_connection(("www.google.com", 80), timeout=3)
+            return True
+        except Exception as e:
+            print(e)
+            return False  
+
     # extract wordlist
     # REMEMBER TO CHANGE FILE PATH
     def extract_wordlist(self, filename=None):
@@ -217,14 +227,18 @@ class DocChecking(Email):
         return int(dt_utc.timestamp())
 
     # blocks executables [100%]
-    def block_high_risk_files(self):
+    def block_high_risk_files(self, files=None, extensions=None, root_file=None):
+
+        files = files or self.files
+        extensions = extensions or self.extensions
 
         wordlist = self.extract_wordlist('high_risk_extensions.txt')
         
-        for files in self.extensions:
+        for files in extensions:
             # high risk extension detected
-            if self.extensions[files] in wordlist:
-                self.file_score[files] += 1000000 # change to max score
+            if extensions[files] in wordlist:
+                target_file = root_file or files
+                self.file_score[target_file] += 1000000 # change to max score
 
         return True
 
@@ -243,45 +257,6 @@ class DocChecking(Email):
 
         return False
 
-    #########################################################################################################
-    #########################################################################################################
-    #########################################################################################################
-    # checks first few bytes to confirm extension [20]
-    def magic_number_check(self):
-        for files in self.extensions:
-            with open(f'{self.document_path}/{files}.{self.extensions[files]}', 'rb') as fb:
-                raw = fb.read()
-
-            ################################################### ADD MORE EXTENSION!!!!!!!!!!!!!!!!!!
-            match (self.extensions[files]):
-                case 'docx' | 'xlsx' | 'pptx':
-                    if raw.startswith(MS_OFFICE_MAGIC):
-                        return 20
-                    # can probably add more logic here, c how i wanna settle it
-                    return 0
-                
-                # file extension not suppoerted to check
-                case _:
-                    print('end')
-
-    #########################################################################################################
-    #########################################################################################################
-    #########################################################################################################
-    # check if file size is suspicious [10]
-    def size_check(self): 
-        for files in self.extensions:
-            print(self.extensions[files])
-            match self.extensions[files]:
-            ############################## filter out size.py and add in the cases 
-                case 'docx':
-                    if self.file_size <= DOCX_SIZE[0] or self.file_size >= DOCX_SIZE[1]:
-                        return 0
-                    return 1
-
-                # file extension not suppoerted to check
-                case _:
-                    print('end')
-
     # checking for macro [10]
     def macro_extension_check(self):
 
@@ -295,7 +270,7 @@ class DocChecking(Email):
                 macro_exist = self.macro_check(file_name)
 
                 if macro_exist:
-                    self.file_score[file_name] += 50
+                    self.file_score[file_name] += 100
 
         return True
 
@@ -309,6 +284,114 @@ class DocChecking(Email):
 
         return False
 
+    # archive file check [10]
+    def archive_check(self):
+        
+        wordlist = self.extract_wordlist('archive_extensions.txt')
+
+        for file_name in self.files:
+            
+            # check if is archive extension
+            if self.extensions[file_name] in wordlist:
+                self.file_score[file_name] += 10
+
+            # check if is .zip
+            if self.extensions[file_name] == 'zip':
+                content = self.archive_content_check(file_name)
+
+                # if archive is password protected
+                if content and content['encrypted'] == True:
+                    self.file_score[file_name] += 10
+
+                if content:
+                    
+                    # extract archive file extensions (only files)
+                    archive_extension = {f: f.split('.')[-1] for f in content['filenames'] if '.' in f.split('/')[-1]}
+
+                    # run block_high_risk_files
+                    self.block_high_risk_files(files=content['filenames'], extensions=archive_extension, root_file=file_name)
+
+        return True
+
+    # encrypted archive file [10]
+    def archive_content_check(self, file_name):
+
+        result = {
+            "encrypted": False,
+            "filenames": []
+        }
+
+        with open(f'{self.document_path}/{file_name}', "rb") as f:
+            data = f.read()
+
+        i = 0
+        # move byte by byte
+        # https://en.wikipedia.org/wiki/ZIP_(file_format)#File_headers
+        while i < len(data):
+            if data[i:i+4] == b'PK\x03\x04':  # byte 1-4 = zip magic number (file header) - not empty
+                flag = unpack("<H", data[i+6:i+8])[0] # byte 6-7 = general purpose bit flag [ZIP HEADER]
+
+                # bit = 1 = not encrypted
+                if flag & 0x1:
+                    result["encrypted"] = True
+
+                # find file name start byte
+                fname_len = unpack("<H", data[i+26:i+28])[0] # byte 26-27 = number of bytes in filename
+                extra_len = unpack("<H", data[i+28:i+30])[0] # byte 28-29 = number of bytes in extra field [ZIP METADATA]
+
+                # from extra field [byte 30+n], search length of filename (fname_len)
+                fname = data[i+30:i+30+fname_len].decode(errors="ignore")
+                if fname:
+                    result["filenames"].append(fname)
+
+                # move on to the next file
+                i += 30 + fname_len + extra_len
+
+            else:
+                # if is not header, move on
+                i += 1
+
+        if len(result['filenames']) != 0:
+            return result
+        else:
+            return None
+
+    # pip install vtapi3
+    # check with virus total [50]
+    def virus_total(self):
+        if self.connectivity == False:
+            return False
+
+        API_KEY = '0f91624513c562fc371b980638f0bf815e54fa4e52e8fb763c29113d0d02947a'
+
+        vt_files = VirusTotalAPIFiles(API_KEY)
+        vt_analysis = VirusTotalAPIAnalyses(API_KEY)
+
+        for file_name in self.files:
+            try:
+                # upload to virus total
+                result = vt_files.upload(f"{self.document_path}/{file_name}")
+                analysis_id = (loads(result))["data"]["id"]
+
+                # get report
+                report = vt_analysis.get_report(analysis_id)
+                report_stats = (loads(report))['data']['attributes']['stats']
+                
+                # get highest rated field
+                highest_score = max(report_stats, key=report_stats.get)
+                
+                match highest_score:
+                    case 'malicious':
+                        self.file_score[file_name] += 50
+                    
+                    case 'suspicious':
+                        self.file_score[file_name] += 50
+
+            # something went wrong
+            except Exception as e:
+                print(e)
+
+        return True
    
     # always clear files after check
     def exit_check(self):
@@ -318,16 +401,38 @@ class DocChecking(Email):
     def run_all_checks(self):
         self.block_high_risk_files()
         self.metadata_check()
-        self.magic_number_check()
-        self.size_check()
         self.macro_extension_check()
+        self.archive_check()
+
+        if self.connectivity == False:
+            self.virus_total()
 
         self.exit_check()
 
-        return 'xxx'
+        return self.file_score, self.connectivity
 
+# calculate risk score (score/total possible score)
+def risk_score_calculate(file_risk_scores:dict, connectivity:bool):
 
-checker = DocChecking("Resources/DATASET/DocsCheck_2.eml")
+    final_file_score = {file_name: 0 for file_name in file_risk_scores}
 
-#checker.metadata_check()
-checker.macro_extension_check()
+    if connectivity == True:
+        max_score = 230
+    else:
+        max_score = 180
+
+    for file_name, score in file_risk_scores.items():
+        
+        # high risk file present
+        if score > max_score:
+            percentage = 100
+        else:
+            percentage = score/max_score * 100
+        final_file_score[file_name] = round(percentage, 2)
+
+    print(final_file_score)
+    return final_file_score
+
+checker = DocChecking("Resources/DATASET/DocCheck3.eml")
+file_score, internet_connection = checker.run_all_checks()
+risk_score_calculate(file_score, internet_connection)

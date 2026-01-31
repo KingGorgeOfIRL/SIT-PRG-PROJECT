@@ -1,6 +1,8 @@
 from socket import create_connection
-from requests import get
+from requests import get, post
 from datetime import datetime, timezone
+from vtapi3 import VirusTotalAPIUrls
+from json import loads
 
 from os import listdir, remove, path
 from email import policy
@@ -356,7 +358,7 @@ class UrlCheck(Email):
     def online_redirection_check(self):
         
         if self.connectivity == False:
-            return
+            return False
 
         for url in self.urls:
             try:
@@ -379,7 +381,7 @@ class UrlCheck(Email):
     def domain_page_rank_check(self):
 
         if self.connectivity == False:
-            return
+            return False
 
         # maybe can put this somewhere else ###################################
         API_KEY = 'swkk00k4ww4osgo4wc4wco0sogowcs0o40kg0wo0'
@@ -482,6 +484,51 @@ class UrlCheck(Email):
         
         return True
 
+    # pip install vtapi3
+    # check with virus total [50]
+    def virus_total(self):
+        if self.connectivity == False:
+            return False
+
+        API_KEY = '0f91624513c562fc371b980638f0bf815e54fa4e52e8fb763c29113d0d02947a'
+        headers = {
+            "accept": "application/json",
+            "x-apikey": API_KEY
+        }
+
+        for url in self.urls:
+            try:
+                # get analysis id
+                response = post(
+                    "https://www.virustotal.com/api/v3/urls",
+                    headers=headers,
+                    data={"url": url},
+                )
+
+                analysis_id = response.json()["data"]["id"]
+                
+                # get report using analysis id
+                report_url = f"https://www.virustotal.com/api/v3/analyses/{analysis_id}"
+                report_response = get(report_url, headers=headers)
+                report_data = report_response.json()
+                report_stats = report_data["data"]['attributes']['stats']
+
+                # get highest rated field
+                highest_score = max(report_stats, key=report_stats.get)
+                
+                match highest_score:
+                    case 'malicious':
+                        self.url_score[url] += 50
+                    
+                    case 'suspicious':
+                        self.url_score[url] += 50
+
+            except Exception as e:
+                print(e)
+
+        return True
+
+
     def run_all_checks(self):
         self.ssl_check()
         self.ip_check()
@@ -500,6 +547,7 @@ class UrlCheck(Email):
             self.online_redirection_check()
             self.domain_page_rank_check()
             self.domain_age_check()
+            self.virus_total()
 
         return self.url_score, self.connectivity
 
@@ -510,18 +558,17 @@ def risk_score_calculate(url_risk_scores:dict, connectivity:bool):
     final_url_score = {url: 0 for url in url_risk_scores}
 
     if connectivity == True:
-        max_score = 230
+        max_score = 280
     else:
-        max_score = 190
+        max_score = 240
 
-    for url, score in url_scores.items():
+    for url, score in url_risk_scores.items():
 
         percentage = score/max_score * 100
         final_url_score[url] = round(percentage, 2)
+
     print(final_url_score)
     return final_url_score
-
-
 
 u = UrlCheck("Resources/DATASET/URL Checker_3.eml")
 url_scores, internet_connection = u.run_all_checks()
