@@ -3,32 +3,33 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-# Replace this with the module name that contains your code
+# Replace with your module filename (without .py)
 import LangAnalysis.main as m
 
 
-class TestUtilities(unittest.TestCase):
-    def test_safe_filename_sanitizes(self):
-        self.assertEqual(m._safe_filename("../evil.txt"), "evil.txt")
-        self.assertEqual(m._safe_filename("a/b\\c?.txt"), "c_.txt")  # basename + sanitization
-        self.assertEqual(m._safe_filename(""), "attachment.bin")
-
-    def test_extract_hrefs_from_html(self):
-        html = '<a href="https://a.com">x</a> <a href=\'/path\'>y</a>'
-        self.assertEqual(m._extract_hrefs_from_html(html), ["https://a.com", "/path"])
-
+class TestHtmlAndFilenameUtils(unittest.TestCase):
     def test_strip_tags(self):
         self.assertEqual(m._strip_tags("<p>Hello <b>World</b></p>").strip(), "Hello World")
 
+    def test_extract_hrefs_from_html(self):
+        html = '<a href="https://a.com">A</a> <a href=\'/path\'>B</a>'
+        self.assertEqual(m._extract_hrefs_from_html(html), ["https://a.com", "/path"])
+
+    def test_safe_filename(self):
+        self.assertEqual(m._safe_filename("../evil.txt"), "evil.txt")
+        self.assertEqual(m._safe_filename("subdir/..//x?.pdf"), "x_.pdf")
+        self.assertEqual(m._safe_filename(""), "attachment.bin")
+        self.assertEqual(m._safe_filename(None), "attachment.bin")
+
 
 class TestInitFile(unittest.TestCase):
-    def test_init_file_dict_mode_parses_numbers(self):
+    def test_init_file_dict_mode_numbers_and_strings(self):
         content = """
         # comment
         key1, 10
         key2 2.5
-        malformed_line_only_key
         key3, not_a_number
+        malformed_line_only_key
         """
         with tempfile.TemporaryDirectory() as td:
             p = os.path.join(td, "k.txt")
@@ -59,20 +60,35 @@ class TestInitFile(unittest.TestCase):
                 f.write(content)
 
             d = m.init_file(p, inverse=True)
-            # inverse maps str(value) -> key
             self.assertEqual(d["7"], "word")
 
 
 class TestTokenise(unittest.TestCase):
     @patch.object(m, "_get_lemmatizer_wordlist", return_value={"running": "run"})
-    def test_tokenise_basic(self, _mock_lemma):
+    def test_tokenise_returns_list_of_lists(self, _mock_lemma):
         out = m.tokenise("Running!!!\nHello, WORLD")
-        # tokenise() returns List[List[str]] but your code currently mixes list nesting.
-        # We can just assert it contains expected tokens somewhere.
-        joined = " ".join(sum(out, []) if out and isinstance(out[0], list) else out)
-        self.assertIn("run", joined)
-        self.assertIn("hello", joined)
-        self.assertIn("world", joined)
+        # Must be list of lines, each a list of tokens
+        self.assertIsInstance(out, list)
+        self.assertTrue(all(isinstance(line, list) for line in out))
+        self.assertTrue(all(isinstance(tok, str) for line in out for tok in line))
+
+        # Content checks
+        # line 1: running -> run
+        self.assertIn("run", out[0])
+        # line 2: hello world
+        self.assertIn("hello", out[1])
+        self.assertIn("world", out[1])
+
+    @patch.object(m, "_get_lemmatizer_wordlist", return_value={})
+    def test_tokenise_filters_non_alnum_and_lowercases(self, _mock_lemma):
+        out = m.tokenise("Hi!!! $$$ 123\nMiXeD CaSe")
+        self.assertEqual(out[0], ["hi", "123"])
+        self.assertEqual(out[1], ["mixed", "case"])
+
+    @patch.object(m, "_get_lemmatizer_wordlist", return_value={})
+    def test_tokenise_empty_lines_removed(self, _mock_lemma):
+        out = m.tokenise("\n\n   \nHello\n\n")
+        self.assertEqual(out, [["hello"]])
 
 
 class TestDetectProb(unittest.TestCase):
@@ -85,11 +101,18 @@ class TestDetectProb(unittest.TestCase):
         tokens = ["please", "process", "payment", "urgently", "now"]
 
         prob, freq = m.detect_prob(tokens, keywords, {})
-        # should match "process payment urgently" (60) not the shorter one (30)
+        # should match the longest phrase
         self.assertEqual(prob, 5.0 + 60.0)
         self.assertEqual(freq["please"], 1)
         self.assertEqual(freq["process payment urgently"], 1)
         self.assertNotIn("process payment", freq)
+
+    def test_detect_prob_multiple_occurrences(self):
+        keywords = {"bank": 10.0}
+        tokens = ["bank", "bank", "x"]
+        prob, freq = m.detect_prob(tokens, keywords, {})
+        self.assertEqual(prob, 20.0)
+        self.assertEqual(freq["bank"], 2)
 
     def test_detect_prob_no_match(self):
         keywords = {"bank": 10.0}
@@ -100,57 +123,87 @@ class TestDetectProb(unittest.TestCase):
 
 
 class TestConfidence(unittest.TestCase):
-    def test_calc_confidence_ignores_low_counts(self):
-        observed = {"bank": 3, "security": 10}
-        model = {"bank": 50.0, "security": 50.0}
-        # bank count=3 ignored, only security contributes
-        total = 13
-        observed_pct_security = (10 / total) * 100  # 76.923...
-        expected_pct_security = 50.0
-        expected_penalty = abs(expected_pct_security - observed_pct_security)
-        self.assertAlmostEqual(m.calc_confidence(observed, model), expected_penalty, places=6)
-
     def test_calc_confidence_empty(self):
         self.assertEqual(m.calc_confidence({}, {"x": 1.0}), 0.0)
+
+    def test_calc_confidence_ignores_counts_leq_3(self):
+        observed = {"bank": 3, "security": 3}
+        model = {"bank": 50.0, "security": 50.0}
+        self.assertEqual(m.calc_confidence(observed, model), 0.0)
+
+    def test_calc_confidence_penalty_computed(self):
+        observed = {"security": 10, "bank": 4}  # both > 3 contribute
+        model = {"security": 50.0, "bank": 50.0}
+
+        total = 14
+        obs_sec = (10 / total) * 100
+        obs_bank = (4 / total) * 100
+        expected = abs(50.0 - obs_sec) + abs(50.0 - obs_bank)
+
+        self.assertAlmostEqual(m.calc_confidence(observed, model), expected, places=6)
 
 
 class TestEmailLanguageRisk(unittest.TestCase):
     @patch.object(m, "_get_lemmatizer_wordlist", return_value={})
-    def test_email_language_risk_simple(self, _mock_lemma):
-        # Minimal matrix: two flags
-        matrix = {
-            "finance": {"process payment": 100.0},
-            "it": {"revalidate your mailbox": 100.0},
-        }
+    def test_email_language_risk_requires_matrix(self, _mock_lemma):
+        with self.assertRaises(ValueError):
+            m.email_language_risk(body="x", title="y", matrix=None)
 
-        # Body contains one finance phrase once.
-        # Keep title empty to avoid extra tokens.
+    @patch.object(m, "_get_lemmatizer_wordlist", return_value={})
+    def test_email_language_risk_title_used_when_no_email(self, _mock_lemma):
+        matrix = {"flag": {"urgent request": 100.0}}
+
+        # 'urgent request' is in title => should score > 0
+        scores = m.email_language_risk(email=None, body="", title="Urgent request", matrix=matrix)
+        self.assertGreater(scores["flag"], 0.0)
+
+    @patch.object(m, "_get_lemmatizer_wordlist", return_value={})
+    def test_email_language_risk_weighting_and_cap(self, _mock_lemma):
+        # Make prob > 100 to verify cap at 100
+        matrix = {"flag": {"pay": 80.0, "now": 80.0}}
+
         scores = m.email_language_risk(
             email=None,
-            body="Please process payment now.",
-            title="",
+            title="pay",
+            body="now",
+            matrix=matrix,
+            total_weightage=40,
+            base_confidence_score=100,
+        )
+
+        # Only one flag => flag_weight == 40
+        # prob contribution from title line (idx=0 weight 1.4): 80*1.4 = 112
+        # body line (idx=1 weight 1.3): 80*1.3 = 104
+        # total = 216 -> capped to 100
+        # confidence_penalty uses counts; both are <=3, so penalty=0 => confidence 100
+        # length_modifier = 1.2 (tokens < 300)
+        # score = 40 * (100/100) * (100/100) * 1.2 = 48.0
+        self.assertAlmostEqual(scores["flag"], 48.0, places=2)
+
+    @patch.object(m, "_get_lemmatizer_wordlist", return_value={})
+    def test_email_language_risk_multiple_flags(self, _mock_lemma):
+        matrix = {
+            "finance": {"process payment": 100.0},
+            "it": {"revalidate mailbox": 100.0},
+        }
+
+        scores = m.email_language_risk(
+            email=None,
+            title="Please process payment",
+            body="Hello",
             matrix=matrix,
             total_weightage=40,
             base_confidence_score=100,
         )
 
         # total_weightage 40 / 2 flags = 20 per flag
-        # finance should get > 0, it should be 0 (no match)
-        self.assertIn("finance", scores)
-        self.assertIn("it", scores)
         self.assertGreater(scores["finance"], 0.0)
         self.assertEqual(scores["it"], 0.0)
-
-    @patch.object(m, "_get_lemmatizer_wordlist", return_value={})
-    def test_email_language_risk_raises_without_matrix(self, _mock_lemma):
-        with self.assertRaises(ValueError):
-            m.email_language_risk(body="x", title="y", matrix=None)
 
 
 class TestEmailParsing(unittest.TestCase):
     @patch.object(m, "_get_lemmatizer_wordlist", return_value={})
-    def test_email_parses_subject_sender_and_body(self, _mock_lemma):
-        # A minimal EML with plain text body
+    def test_email_parses_plain_text(self, _mock_lemma):
         eml = (
             "From: Alice <alice@example.com>\r\n"
             "To: Bob <bob@example.com>\r\n"
@@ -195,7 +248,46 @@ class TestEmailParsing(unittest.TestCase):
             e = m.Email(email_path=eml_path, attachment_output_path=os.path.join(td, "att"))
             self.assertIn("https://example.com/a", e.urls)
             self.assertIn("/b", e.urls)
-            self.assertTrue(len(e.text) > 0)  # html stripped -> text
+            self.assertTrue(len(e.text.strip()) > 0)
+
+    @patch.object(m, "_get_lemmatizer_wordlist", return_value={})
+    def test_email_saves_attachment(self, _mock_lemma):
+        # Multipart with one plain part and one attachment
+        eml = (
+            "From: A <a@x.com>\r\n"
+            "Subject: With Attachment\r\n"
+            "MIME-Version: 1.0\r\n"
+            "Content-Type: multipart/mixed; boundary=BOUND\r\n"
+            "\r\n"
+            "--BOUND\r\n"
+            "Content-Type: text/plain; charset=utf-8\r\n"
+            "\r\n"
+            "Body text\r\n"
+            "--BOUND\r\n"
+            "Content-Type: application/octet-stream\r\n"
+            "Content-Disposition: attachment; filename=\"test.bin\"\r\n"
+            "Content-Transfer-Encoding: base64\r\n"
+            "\r\n"
+            "aGVsbG8=\r\n"  # "hello"
+            "--BOUND--\r\n"
+        ).encode("utf-8")
+
+        with tempfile.TemporaryDirectory() as td:
+            eml_path = os.path.join(td, "msg.eml")
+            att_dir = os.path.join(td, "att")
+            with open(eml_path, "wb") as f:
+                f.write(eml)
+
+            e = m.Email(email_path=eml_path, attachment_output_path=att_dir)
+
+            self.assertEqual(len(e.attachment_header), 1)
+            meta = e.attachment_header[0]
+            self.assertEqual(meta["filename"], "test.bin")
+            self.assertTrue(os.path.exists(meta["saved_to"]))
+            self.assertEqual(meta["size_bytes"], 5)  # "hello" is 5 bytes
+
+            with open(meta["saved_to"], "rb") as f:
+                self.assertEqual(f.read(), b"hello")
 
 
 if __name__ == "__main__":

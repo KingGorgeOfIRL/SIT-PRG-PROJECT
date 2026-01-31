@@ -67,17 +67,18 @@ class Email:
         self.email_path: str = email_path
         self.attachment_output_path: str = attachment_output_path
 
-        # Parse full message
-        self.raw: Message = self.__parse_eml()
+        if self.email_path:
+            # Parse full message
+            self.raw: Message = self.__parse_eml()
 
-        # Extract headers dict safely
-        self.headers: Dict[str, str] = self.__extract_headers(self.raw)
+            # Extract headers dict safely
+            self.headers: Dict[str, str] = self.__extract_headers(self.raw)
 
-        self.subject: str = self.headers.get("Subject", "") or ""
-        self.sender: str = self.headers.get("From", "") or ""
+            self.subject: str = self.headers.get("Subject", "") or ""
+            self.sender: str = self.headers.get("From", "") or ""
 
-        # Extract body + attachments + urls
-        self.text, self.attachment_header, self.urls = self.__extract_body(self.raw)
+            # Extract body + attachments + urls
+            self.text, self.attachment_header, self.urls = self.__extract_body(self.raw)
    
     def __parse_eml(self) -> Message:
         #Parse the EML file in binary mode using BytesParser.
@@ -187,6 +188,9 @@ def init_file(
     output_dict: Dict[str, Union[str, float]] = {}
     output_list: List[List[str]] = []
 
+    if not path:
+        return output_list if conv_to_list else output_dict
+
     with open(path, "r", encoding=encoding) as file:
         for raw_line in file:
             line = raw_line.strip()
@@ -220,12 +224,6 @@ def init_file(
 
     return output_list if conv_to_list else output_dict
 
-def WordList_lemmatizer(word: str, wordlist: Optional[Dict[str, str]] = None) -> str:
-    #Perform brute-force lemmatization using a lookup table
-    if not wordlist:
-        return word
-    return wordlist.get(word, word)
-
 def printable(string:str) -> bool:
     return string.isprintable()
 
@@ -246,22 +244,27 @@ def tokenise(text: str) -> List[List[str]]:
     #Strip, simplify, and tokenise text using a brute-force wordlist lemmatizer.
     tokenised: List[str] = []
     wordlist = _get_lemmatizer_wordlist()
-
-    for raw_line in text.split("\n"):
-        words = filter(printable, raw_line.split())
-        word_line: List[str] = []
+    if not text:
+        return tokenised
+    
+    lines = text.split("\n")
+    for raw_line in lines:
+        words = list(filter(printable, raw_line.split()))
+        word_line = []
         for word in words:
             cleaned = re.sub(r"[^A-Za-z0-9]+", "", word).lower()
             if not cleaned:
                 continue
-            lemma = WordList_lemmatizer(cleaned, wordlist)
-            word_line.append(lemma)
-        if word_line:
-            if tokenised:
-                tokenised.append(word_line)
+            
+            #Perform brute-force lemmatization using a lookup table
+            if wordlist:
+                lemma = wordlist.get(cleaned,cleaned)
             else:
-                tokenised = word_line
-
+                lemma = cleaned
+            word_line.append(lemma)
+        
+        if word_line:
+            tokenised.append(word_line)
     return tokenised
 
 def increment_frequncy(frequency:dict,item):
@@ -279,14 +282,16 @@ def init_keyword_matrix(
     Each file represents a risk flag category.
     """
     matrix: Dict[str, Dict[str, float]] = {}
-    for dirpath, _, filenames in os.walk(keyword_folder_path):
+    data = os.walk(keyword_folder_path)
+    for dirpath, _, filenames in data:
         for filename in filenames:
             flag_name = filename.rsplit(".", 1)[0]
             keywords = init_file(os.path.join(dirpath, filename))
             
             flag_keywords: Dict[str, float] = {}
             
-            for key, value in keywords.items():
+            data = keywords.items()
+            for key, value in data:
                 # Tokenise keyword/keyphrase and normalise to space-separated form
                 tokenised_key = tokenise(key)
                 normalised_key = " ".join(tokenised_key)
@@ -304,9 +309,7 @@ def email_language_risk(
     matrix: Optional[Dict[str, Dict[str, float]]] = None,
     total_weightage: int = 40,base_confidence_score: int = 100
 ) -> Dict[str, float]:
-    """
-    Calculate per-flag language risk scores for an email.
-    """
+    #Calculate per-flag language risk scores for an email.
 
     if matrix is None:
         raise ValueError("Keyword matrix must be provided")
@@ -332,7 +335,8 @@ def email_language_risk(
         frequency: Dict[str, int] = {}
         flag_prob = 0.0
 
-        for idx, line in enumerate(tokens):
+        data = enumerate(tokens)
+        for idx, line in data:
             prob, frequency = detect_prob(line, keywords, frequency)
             if prob > 0:
                 applicable_weight = next(
@@ -365,14 +369,16 @@ def calc_confidence(
     Computes confidence penalty using L1 distance between
     observed keyword distribution and model probabilities.
     """
-    if not observed:
+    if not observed or not model:
         return 0.0
+    
     total = sum(observed.values())
     if total == 0:
         return 0.0
+    
     penalty = 0.0
     for key, count in observed.items():
-        if count <= 3:
+        if count <= 3 and " " not in key:
             continue
         observed_pct = (count / total) * 100
         expected_pct = model.get(key, 0)
@@ -387,6 +393,8 @@ def detect_prob(
     Detect keyword and keyphrase probabilities using
     greedy longest-match-first scanning.
     """
+    if not tokens or not keywords:
+        return 0.0, frequency or {}
     if frequency is None:
         frequency = {}
     probability = 0.0
@@ -407,3 +415,5 @@ def detect_prob(
         if not matched:
             i += 1
     return probability, frequency
+
+print(tokenise("Running!!!\nHello, WORLD"))
