@@ -4,40 +4,34 @@ from email.utils import parsedate_to_datetime, parseaddr
 from LangAnalysis import Email
 
 class EmailVerifier:
+    #centralised risk weights
+    #easier for me to compute max risk score.
+    RISK_WEIGHTS = {
+        "unknown_sender": 1,
+        "display_name_mismatch": 3,
+        "suspicious_pattern": 2,
+        "lookalike_domain": 4,
+        "brand_impersonation": 4,
+        # "reply_to_mismatch": 3,
+        "suspicious_domain_structure": 1,
+        "sender_username_suspicious": 2,
+    }
+
     def __init__(self, email):
         self.email = email
-
         self.risk_score = 0
         self.flags = {}
-        # Loads trusted emails, domains and known companies from files
-        self.trusted_emails = self.load_wordlist("resources/WORDLISTS/trusted_emails.txt")
-        self.trusted_domains = self.load_wordlist("resources/WORDLISTS/domains.txt")
-        self.known_company = self.load_wordlist("resources/WORDLISTS/companies.txt")
-
-        # extract sender info
+        self.max_risk_score = sum(self.RISK_WEIGHTS.values())
+        #loads trusted emails, domains and known companies from files
+        self.trusted_emails = self.load_wordlist("resources/WORDLISTS/email_verify/trusted_emails.txt")
+        self.trusted_domains = self.load_wordlist("resources/WORDLISTS/email_verify/domains.txt")
+        self.known_company = self.load_wordlist("resources/WORDLISTS/email_verify/companies.txt")
+        self.known_suswords = self.load_wordlist("Resources/WORDLISTS/email_verify/suspisciouswords.txt")
+        #extract sender info
         self.display_name, self.sender_email = self.extract_sender_info()
         self.sender_domain = self.extract_domain(self.sender_email)
+
     
-    #FOR Testing without eml files
-    @classmethod
-    def from_sender_email(cls, sender_email: str):
-        # Creates an EmailVerifier instance for testing without an Email object.
-        obj = cls.__new__(cls) 
-
-        obj.email = None
-        obj.risk_score = 0
-        obj.flags = {}
-
-        obj.trusted_emails = obj.load_wordlist("resources/WORDLISTS/trusted_emails.txt")
-        obj.trusted_domains = obj.load_wordlist("resources/WORDLISTS/domains.txt")
-        obj.known_company = obj.load_wordlist("resources/WORDLISTS/companies.txt")
-
-        obj.display_name = ""
-        obj.sender_email = sender_email.lower()
-        obj.sender_domain = obj.extract_domain(obj.sender_email)
-
-        return obj
-
     def load_wordlist(self, filepath: str) -> set:
         with open(filepath, "r", encoding="utf-8") as file:
             return {
@@ -46,7 +40,7 @@ class EmailVerifier:
                 if line.strip() and not line.startswith("#")
             }
         
-    # separates sender display name and email address from From header
+    #separates sender display name and email address from From header
     def extract_sender_info(self):
         name, addr = parseaddr(self.email.sender)
         return name.lower(), addr.lower()
@@ -60,13 +54,16 @@ class EmailVerifier:
     def normalize_domain(self, domain):
         return domain.lower().strip() if domain else ""
     
-    #Checks if the email is in the trusted.txt
+    #checks if the email is in the trusted.txt
     def trusted_email_check(self):
         if self.sender_email in self.trusted_emails:
             self.flags["trusted_email"] = True
-            self.risk_score -= 5
+            self.risk_score += 0
             return True
-        return False
+        else:
+            self.flags["unknown_sender"] = True
+            self.risk_score += self.RISK_WEIGHTS["unknown_sender"]
+            return False
 
     #checks if sender domain is trusted
     def domain_whitelist_check(self):
@@ -84,22 +81,51 @@ class EmailVerifier:
         for company in self.known_company:
             if company in self.display_name and company not in self.sender_domain:
                 self.flags["display_name_mismatch"] = True
-                self.risk_score += 3
+                self.risk_score += self.RISK_WEIGHTS["display_name_mismatch"]
                 return
 
-    #checks if sender uses sus words in their domain
-    def domain_pattern_check(self):
-        sus_words = [
-            "secure", "verify", "login", "update",
-            "account", "support", "billing", "real"
-        ]
+    #checks if sender uses suspicious words in the local part of the email (before the @)     
+    def sender_username_check(self):
+        if not self.sender_email or "@" not in self.sender_email:
+            return
 
-        for word in sus_words:
+        local_part = self.sender_email.split("@")[0]
+
+        for word in self.known_suswords:
+            if word in local_part:
+                self.flags["sender_username_suspicious"] = True
+                self.risk_score += self.RISK_WEIGHTS["sender_username_suspicious"]
+                return
+
+        #brand name in local part but not in domain
+        for company in self.known_company:
+            if company in local_part and company not in self.sender_domain:
+                self.flags["local_part_brand_impersonation"] = True
+                self.risk_score += self.RISK_WEIGHTS["local_part_suspicious"]
+                return
+            
+    #checks if sender uses suspicious words in their domain
+    def domain_pattern_check(self):
+        for word in self.known_suswords:
             if word in self.sender_domain:
                 self.flags["suspicious_pattern"] = True
-                self.risk_score += 2
+                self.risk_score += self.RISK_WEIGHTS["suspicious_pattern"]
                 return
-                    
+            
+    #checks subdomain depth
+    def suspicious_domain_structure_check(self):
+        if not self.sender_domain:
+            return
+        
+        dot_count = self.sender_domain.count(".")
+        
+        #example:
+        #mail.company.com -> 2 dots (OK)
+        #login.secure.update.company.com -> 4+ dots (suspicious)
+        if dot_count >= 4:
+            self.flags["suspicious_domain_structure"] = True
+            self.risk_score += self.RISK_WEIGHTS["suspicious_domain_structure"]
+
     # computes distance between 2 strings. To measure similarity
     def edit_distance(self, a, b):
         dp = [[0] * (len(b)+1) for _ in range(len(a)+1)]
@@ -125,7 +151,7 @@ class EmailVerifier:
             dist = self.edit_distance(self.sender_domain, trusted)
             if 0 < dist <= 2:
                 self.flags["lookalike_domain"] = True
-                self.risk_score += 4
+                self.risk_score += self.RISK_WEIGHTS["lookalike_domain"]
                 return
                    
     #checks if domain is impersonating a domain e.g. suspisciouspaypal.com
@@ -135,40 +161,69 @@ class EmailVerifier:
                 for trusted in self.trusted_domains:
                     if company in trusted and self.sender_domain != trusted:
                         self.flags["brand_impersonation"] = True
-                        self.risk_score += 4
+                        self.risk_score += self.RISK_WEIGHTS["brand_impersonation"]
                         return
+                    
+    #increases risk slightly if local part is suspiscious and domain is not whitelisted
+    def username_domain_mismatch(self):
+        if (
+            self.flags.get("sender_username_suspicious")
+            and not self.flags.get("whitelisted_domain")
+        ):
+            self.flags["username_domain_mismatch"] = True
+            self.risk_score += 2
 
+    # def reply_to_mismatch_check(self):
+    #     #gets reply-to header if it exists
+    #     reply_to = self.email.headers.get("reply-to", "")
+
+    #     if not reply_to:
+    #         return
+
+    #     reply_to_domain = self.extract_domain(reply_to)
+
+    #     if reply_to_domain and reply_to_domain != self.sender_domain:
+    #         self.flags["reply_to_mismatch"] = True
+    #         self.risk_score += self.RISK_WEIGHTS["reply_to_mismatch"]
+
+    def get_risk_percentage(self):
+        if self.risk_score <= 0:
+            return 0.0
+        return (self.risk_score / self.max_risk_score) * 100       
+
+    def _final_result(self):
+        return {
+            "risk_score": self.risk_score,
+            "risk_percentage": round(self.get_risk_percentage(), 2),
+            "flags": self.flags
+        }
+    
     # runs all checks and give the final risk score
     def run_verification(self):
         self.sender_domain = self.normalize_domain(self.sender_domain)
         #skips other checks if email is trusted. Might want to add other checks to see if trusted email is actually trusted
         if self.trusted_email_check():
-            return {
-                "risk_score": self.risk_score,
-                "flags": self.flags
-            }
+            return self._final_result()
 
         self.domain_whitelist_check()
         self.display_name_mismatch_check()
+        self.suspicious_domain_structure_check()
+        self.sender_username_check()
         self.domain_pattern_check()
         self.lookalike_domain_check()
         self.brand_in_domain_check()
+        # self.reply_to_mismatch_check()
+        self.username_domain_mismatch()
 
-        return {
-            "risk_score": self.risk_score,
-            "flags": self.flags
-        }
+        return self._final_result()
 
 #test
-
-# email = Email("Resources/DATASET/Project Proposal.eml")
-verifier = EmailVerifier.from_sender_email("test@paypal-secure-login.com")
+email = Email("Resources/DATASET/lennontest.eml")
+verifier = EmailVerifier(email)
 
 # print("Subject:", email.subject)
 # print("Sender:", email.sender)
 # print("Domain:", verifier.sender_domain)
 # print("Display name:", verifier.display_name)
-
-
 result = verifier.run_verification()
 print(result)

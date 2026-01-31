@@ -1,7 +1,12 @@
 gmail.com
+google.com
 outlook.com
 yahoo.com
 edu.sg
 sit.singaporetech.edu.sg
 gov.sg
 icloud.com
+paypal.com
+apple.com
+
+
