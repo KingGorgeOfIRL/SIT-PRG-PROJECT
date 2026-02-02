@@ -3,7 +3,7 @@ from requests import get, post
 from datetime import datetime, timezone
 from vtapi3 import VirusTotalAPIUrls
 from json import loads
-from LangAnalysis import Email
+from LangAnalysis.main import Email
 
 #### IDEA:
 # be able to add/remove stuff into WORDLISTS
@@ -75,7 +75,8 @@ class UrlCheck(Email):
     # extract wordlist
     # REMEMBER TO CHANGE FILE PATH
     def extract_wordlist(self, filename=None):
-        with open(f'Resources/WORDLISTS/temp_wordlist{filename}', "r", encoding="utf-8") as f:
+        #with open(f'Resources/WORDLISTS/temp_wordlist/{filename}', "r", encoding="utf-8") as f:
+        with open(f'URLChecking/temp_wordlist/{filename}', "r", encoding="utf-8") as f:
             wordlist = f.read().split()
 
         return wordlist
@@ -440,6 +441,6 @@ def risk_score_calculate(url_risk_scores:dict, connectivity:bool):
     print(final_url_score)
     return final_url_score
 
-u = UrlCheck("Resources/DATASET/URL Checker_3.eml")
+u = UrlCheck("Resources/DATASET/Project Proposal.eml")
 url_scores, internet_connection = u.run_all_checks()
 risk_score_calculate(url_scores, internet_connection)

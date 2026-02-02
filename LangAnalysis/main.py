@@ -417,5 +417,6 @@ def detect_prob(
     return probability, frequency
 
 if __name__ == "__main__":
-    from testcases import *
-    unittest.main(verbosity=2)
+    #from testcases import *
+    #unittest.main(verbosity=2)
+    pass

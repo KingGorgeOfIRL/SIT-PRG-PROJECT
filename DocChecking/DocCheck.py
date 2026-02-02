@@ -9,17 +9,23 @@ from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
 
 from os import listdir, remove, path
-from LangAnalysis import Email
+from LangAnalysis.main import Email
+
+from os import stat
+from pathlib import Path
 
 class DocChecking(Email):
     def __init__(self, email_path = None):
         super().__init__(email_path)
 
-        self.document_path:str = 'Resources/TEMP_FILES'
+        # self.document_path:str = 'Resources/TEMP_FILES'
+        self.document_path = self.attachment_output_path
         self.connectivity:[bool] = self.__internet_check()
         self.files:list[str] = self.__get_files()
         self.extensions: dict[str, str] = self.__extension_extraction()
-        self.file_size:int = (int(self.attachment_header[0]['size=']) / 1024) # convert to bytes
+        # self.file_size:int = (int(self.attachment_header[0]['size=']) / 1024) # convert to bytes
+        # changed this as there is a keyerror thrown, there is no "size="
+        self.file_size = self.attachment_header[0]['size_bytes'] / 1024
         self.metadata_date:dict = self.__date_extraction()
         self.file_score = {filename: 0 for filename in self.files}
 
@@ -48,22 +54,19 @@ class DocChecking(Email):
     
     # depending on the email class dk if it will have multiple
     def __date_extraction(self):
-        metadata_dates = {filename: 0 for filename in self.files}
+        metadata_dates = {}
 
         for file_entry in self.attachment_header:
-            filename = file_entry['filename=']
+            file_path = Path(file_entry["saved_to"])
 
-            creation_date_epoch = self.to_epoch_time(
-                file_entry['creation-date=']
-            )
+            try:
+                file_stat = file_path.stat()
+            except FileNotFoundError:
+                continue
 
-            modified_date_epoch = self.to_epoch_time(
-                file_entry['modification-date=']
-            )
-
-            metadata_dates[filename] = {
-                "creation": creation_date_epoch,
-                "modified": modified_date_epoch
+            metadata_dates[file_entry["filename"]] = {
+                "creation": int(file_stat.st_ctime),
+                "modified": int(file_stat.st_mtime),
             }
 
         return metadata_dates
