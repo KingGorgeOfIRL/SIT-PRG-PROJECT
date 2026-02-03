@@ -5,22 +5,18 @@ from vtapi3 import VirusTotalAPIUrls
 from json import loads
 from LangAnalysis import Email
 
-#### IDEA:
-# be able to add/remove stuff into WORDLISTS
-
-
 class UrlCheck(Email):
     def __init__(self, email_path = None):
         super().__init__(email_path)
 
         # testing purpose
-        self.urls.append("https://19.201.39.2/|+")
-        self.urls.append("https://login.verify.bank.transfer.example.com")
-        self.urls.append("https://google.com")
-        self.urls.append("http://127.0.0.1:8080/test")
-        self.urls.append("http://tinyurl.com/time0ut/main.html")
-        self.urls.append("http://youtube.com@google.com")
-        self.urls.append("https://malicious.com:9901/bank?redir=skem.com")
+        # self.urls.append("https://19.201.39.2/|+")
+        # self.urls.append("https://login.verify.bank.transfer.example.com")
+        # self.urls.append("https://google.com")
+        # self.urls.append("http://127.0.0.1:8080/test")
+        # self.urls.append("http://tinyurl.com/time0ut/main.html")
+        # self.urls.append("http://youtube.com@google.com")
+        # self.urls.append("https://malicious.com:9901/bank?redir=skem.com")
         
         self.url_score = {url: 0 for url in self.urls}
         self.connectivity:[bool] = self.__internet_check()
@@ -75,7 +71,7 @@ class UrlCheck(Email):
     # extract wordlist
     # REMEMBER TO CHANGE FILE PATH
     def extract_wordlist(self, filename=None):
-        with open(f'Resources/WORDLISTS/temp_wordlist{filename}', "r", encoding="utf-8") as f:
+        with open(f'Resources/WORDLISTS/url_check/{filename}', "r", encoding="utf-8") as f:
             wordlist = f.read().split()
 
         return wordlist

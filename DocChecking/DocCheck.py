@@ -79,7 +79,7 @@ class DocChecking(Email):
     # extract wordlist
     # REMEMBER TO CHANGE FILE PATH
     def extract_wordlist(self, filename=None):
-        with open(f'DocChecking/temp_wordlist/{filename}', "r", encoding="utf-8") as f:
+        with open(f'Resources/WORDLISTS/doc_check/{filename}', "r", encoding="utf-8") as f:
             wordlist = f.read().split()
 
         return wordlist
