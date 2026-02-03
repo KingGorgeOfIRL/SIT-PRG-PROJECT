@@ -2,9 +2,10 @@
 # 35% Language, 40% email, 25% Url, attachment no
 # 15%, language, 35% email, 25% url, 25% attachment
 
-
+# The second DocChecking is the class of the folder DocChecking
+from DocChecking.DocCheck import DocChecking, risk_score_calculate
 from URLChecking.UrlCheck import UrlCheck
-from EmailVerify.main import EmailVerifier, Email
+#from EmailVerify.main import EmailVerifier, Email
 
 import tkinter as tk
 from tkinter import ttk, filedialog, scrolledtext
@@ -12,9 +13,22 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 from email.parser import Parser
 from email import policy
-
+from LangAnalysis import *
 def get_docChecking_scores():
-    pass
+    
+    # Grabs the files and places them in a list called "list_of_files"
+    #object = DocChecking("Resources/DATASET/Project Proposal.eml")
+    #list_of_files = object.files
+
+
+    checker = DocChecking("Resources/DATASET/DocCheck3.eml")
+    file_score, internet_connection = checker.run_all_checks()
+    dict_result = risk_score_calculate(file_score, internet_connection)
+
+
+    return dict_result
+    
+print(get_docChecking_scores())
 
 
 def get_urlCheck_scores():
@@ -38,22 +52,27 @@ def get_urlCheck_scores():
 
     return overall_percentage
 
-
+print(get_urlCheck_scores)
 
 def get_emailVerify_scores():
     # edit_distance() is used for detecting sus typos like g00gle.com instead of google.com (Levenshtein edit distance)
     # To use the EmailVerifier class you need to give normalize_domain() an EmailVerifier object, not a string
-    email = Email("Resources/DATASET/Project Proposal.eml")
-    verifier = EmailVerifier(email)
+    #email = Email("Resources/DATASET/Project Proposal.eml")
+    #verifier = EmailVerifier(email)
     
-    result = verifier.run_verification()
-    print(result)
-
+    #result = verifier.run_verification()
+    #print(result)
+    pass
     
 
 
 
-def get_langAnalysis_scores():
+def get_langAnalysis_scores(email:Email):
+    matrix = init_keyword_matrix()
+    result = email_language_risk(email=email,
+                                 matrix=matrix,
+                                 total_weightage=40,
+                                 base_confidence_score=100)
     pass
 
 
@@ -63,7 +82,7 @@ def get_langAnalysis_scores():
 # print(f"Percentage from UrlCheck : {get_urlCheck_scores()}%")
 # print(f"Percentage from DocChecking : {get_docChecking_scores()}%")
 # get_emailVerify_scores()
-
+# get_docChecking_scores()
 
 
 ##############################                 End of scores gathering section, start of GUI section                 ###########################################################
@@ -137,6 +156,45 @@ class EmailPieApp:
         self.email_content_text = scrolledtext.ScrolledText(self.right_frame, wrap='word')
         self.email_content_text.pack(fill='both', expand=True, padx=10, pady=5)
 
+        # Attachment data for pie chart
+        self.attachment_scores = {}
+
+        ############################ Attachment part (DocCheck) ########################################
+
+        # Attachment list label
+        self.attachment_label = tk.Label(
+            self.charts_frame,
+            text="Attachments",
+            font=("Arial", 10, "bold")
+        )
+
+        # Attachment list box
+        self.attachment_listbox = tk.Listbox(
+            self.charts_frame,
+            width=60,
+            height=10,        # visible rows
+            activestyle="none"
+        )
+
+        ############################ Language Analysis part (LangAnalysis) ########################################
+
+        # Language Analysis list label
+        self.LangAnalysis_label = tk.Label(
+            self.charts_frame,
+            text="Language Analysis",
+            font=("Arial", 10, "bold")
+        )
+
+        # Language Analysis box
+        self.LangAnalysis_listbox = tk.Listbox(
+            self.charts_frame,
+            width=60,
+            height=10,        # visible rows
+            activestyle="none"
+        )
+
+
+
         # Store chart data
         self.chart_data = [
             {"Safe": 100},
@@ -152,6 +210,10 @@ class EmailPieApp:
     def load_email(self):
         file_path = filedialog.askopenfilename(filetypes=[("Email files", "*.eml")])
         if file_path:
+            
+            # Get attachment data from docChecking
+            self.attachment_scores = get_docChecking_scores()
+
             # Update chart data
             self.chart_data = analyze_email(file_path)
             self.update_chart_display(self.current_chart.get())
@@ -167,44 +229,119 @@ class EmailPieApp:
 
     def draw_chart(self, index):
         self.ax_chart.clear()
-        data = self.chart_data[index]
+        selected = self.current_chart.get()
+
+        # Attachment Validation chart
+        if selected == "Attachment Validation":
+            self.draw_attachment_chart()
+
+        # URL Validation chart
+        elif selected == "URL Validator":
+            self.draw_url_chart()
+
+
+        # Email Validator chart
+        elif selected == "Email Validator":
+            self.draw_email_chart()
+
+
+        # Language Analysis chart
+        elif selected == "Language Analysis":
+            self.draw_language_chart()
+
+        self.canvas_chart.draw()
+
+############################ 4 Pie chart display functions ######################################################
+
+    def draw_attachment_chart(self):
+        if not self.attachment_scores:
+            self.ax_chart.text(
+                0.5, 0.5, "No attachments",
+                ha='center', va='center', fontsize=12
+            )
+            return
+
+        labels = list(self.attachment_scores.keys())
+        sizes = list(self.attachment_scores.values())
+
+        colors = []
+        for s in sizes:
+            if s < 30:
+                colors.append("green")
+            elif s < 70:
+                colors.append("orange")
+            else:
+                colors.append("red")
+
+        self.ax_chart.pie(
+            sizes,
+            labels=labels,
+            autopct='%1.1f%%',
+            startangle=90,
+            colors=colors
+        )
+
+        self.ax_chart.axis('equal')
+        self.ax_chart.set_title("Attachment Risk", fontsize=14, fontweight='bold')
+
+
+    def draw_url_chart(self):
+        data = self.chart_data[1]   # {"Trusted": 50, "Untrusted": 50}
+
         labels = list(data.keys())
         sizes = list(data.values())
 
-        # Color mapping
-        colors = []
-        for label in labels:
-            l = label.lower().strip()
-            if l in ["safe", "trusted", "legit", "low risk"]:
-                colors.append("green")
-            elif l in ["medium", "warning", "medium risk"]:
-                colors.append("orange")
-            elif l in ["untrusted", "suspicious", "high risk", "risk", "phishing", "spam"]:
-                colors.append("red")
-            else:
-                colors.append("gray")
-
-        # Draw pie chart
-        wedges, texts, autotexts = self.ax_chart.pie(
-            sizes, labels=labels, autopct='%1.1f%%', startangle=90, colors=colors
+        self.ax_chart.pie(
+            sizes,
+            labels=labels,
+            autopct='%1.1f%%',
+            startangle=90,
+            colors=["green", "red"]
         )
+
         self.ax_chart.axis('equal')
+        self.ax_chart.set_title("URL Validator", fontsize=14, fontweight='bold')
 
-        # Set the title inside the pie chart axes
-        self.ax_chart.set_title(self.current_chart.get(), fontsize=14, fontweight='bold')
 
-        # Legend below the pie chart
-        self.ax_chart.legend(
-            wedges,
-            [f"{l}: {s}%" for l, s in zip(labels, sizes)],
-            title="Legend",
-            loc="lower center",
-            bbox_to_anchor=(0.5, -0.1),
-            ncol=2,
-            frameon=False
+    def draw_email_chart(self):
+        data = self.chart_data[2]
+
+        labels = list(data.keys())
+        sizes = list(data.values())
+
+        self.ax_chart.pie(
+            sizes,
+            labels=labels,
+            autopct='%1.1f%%',
+            startangle=90
         )
 
-        self.canvas_chart.draw()
+        self.ax_chart.axis('equal')
+        self.ax_chart.set_title("Email Validator", fontsize=14, fontweight='bold')
+
+
+    def draw_language_chart(self):
+        data = self.chart_data[3]
+
+        labels = list(data.keys())
+        sizes = list(data.values())
+
+        self.ax_chart.pie(
+            sizes,
+            labels=labels,
+            autopct='%1.1f%%',
+            startangle=90
+        )
+
+        self.ax_chart.axis('equal')
+        self.ax_chart.set_title("Language Analysis", fontsize=14, fontweight='bold')
+
+
+
+############################ END OF 4 Pie chart display functions ######################################################
+
+
+
 
     def draw_overall_chart(self):
         self.ax_overall.clear()
@@ -244,6 +381,66 @@ class EmailPieApp:
         index = self.chart_names.index(selected_name)
         self.draw_chart(index)
         self.draw_overall_chart()
+
+        # Show attachments only for Attachment Validation
+        if selected_name == "Attachment Validation":
+            self.show_attachments()
+        else:
+            self.hide_attachments()
+
+        # Show attachments only for Language Analysis Validation
+        if selected_name == "Language Analysis":
+            self.show_LangAnalysis()
+        else:
+            self.hide_LangAnalysis()
+
+
+
+    def show_attachments(self):
+        self.attachment_label.pack(pady=(10, 0))
+        self.attachment_listbox.pack(
+            fill="both",
+            expand=True,
+            padx=10,
+            pady=5
+        )
+
+        self.attachment_listbox.delete(0, tk.END)
+
+        if not self.attachment_scores:
+            self.attachment_listbox.insert(tk.END, "No attachments found")
+        else:
+            for name, score in self.attachment_scores.items():
+                self.attachment_listbox.insert(
+                    tk.END, f"{name} — {score:.1f}% risk"
+            )
+
+
+    def hide_attachments(self):
+        self.attachment_label.pack_forget()
+        self.attachment_listbox.pack_forget()
+
+
+
+    ############################ Language Analysis part (LangAnalysis) ########################################
+
+    def show_LangAnalysis(self):
+        self.LangAnalysis_label.pack(pady=(10, 0))
+        self.LangAnalysis_listbox.pack(fill="x", padx=10, pady=5)
+
+        self.LangAnalysis_listbox.delete(0, tk.END)
+
+        if not self.list_of_files:
+            self.LangAnalysis_listbox.insert(tk.END, "No language analysis found")
+        else:
+            for file in self.list_of_files:
+                self.LangAnalysis_listbox.insert(tk.END, file)
+
+
+    def hide_LangAnalysis(self):
+        self.LangAnalysis_label.pack_forget()
+        self.LangAnalysis_listbox.pack_forget()
+
 
 if __name__ == "__main__":
     root = tk.Tk()

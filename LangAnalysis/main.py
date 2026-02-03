@@ -66,7 +66,13 @@ class Email:
     ):
         self.email_path: str = email_path
         self.attachment_output_path: str = attachment_output_path
-
+        self.raw = None
+        self.headers = None
+        self.subject = None
+        self.sender = None
+        self.text = None
+        self.attachment_header = None
+        self.urls = None
         if self.email_path:
             # Parse full message
             self.raw: Message = self.__parse_eml()
@@ -294,7 +300,7 @@ def init_keyword_matrix(
             for key, value in data:
                 # Tokenise keyword/keyphrase and normalise to space-separated form
                 tokenised_key = tokenise(key)
-                normalised_key = " ".join(tokenised_key)
+                normalised_key = " ".join(tokenised_key[0])
 
                 # Store probability as float
                 flag_keywords[normalised_key] = float(value)
@@ -417,5 +423,10 @@ def detect_prob(
     return probability, frequency
 
 if __name__ == "__main__":
-    from testcases import *
-    unittest.main(verbosity=2)
+    email = Email("Resources/DATASET/story.eml")
+    matrix = init_keyword_matrix()
+    result = email_language_risk(email=email,
+                                 matrix=matrix,
+                                 total_weightage=40,
+                                 base_confidence_score=100)
+    print(result)
