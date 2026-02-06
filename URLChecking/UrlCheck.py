@@ -1,35 +1,68 @@
 from socket import create_connection
 from requests import get, post
-from datetime import datetime, timezone
+import datetime
 from vtapi3 import VirusTotalAPIUrls
 from json import loads
 from LangAnalysis import Email
 
 class UrlCheck(Email):
+
+    RISK_WEIGHTS = {
+        "ssl_check": 10,
+        "ip_check": 20,
+        "port_check": 20,
+        "urlShortener_check": 10,
+        "length_check": 10,
+        "subdomain_check": 20,
+        "specialChar_check": 20,
+        "at_symbol_check": 30,
+        "punycode_check": 40
+    }
+
+    RISK_WEIGHTS_OFFLINE = {
+        "offline_redirection_check": 10
+    }
+
+    RISK_WEIGHTS_ONLINE = {
+        "online_redirection_check": 20,
+        "domain_page_rank_check": 10,
+        "domain_age_check": 20,
+        "virus_total": 50
+    }
+
     def __init__(self, email_path = None):
         super().__init__(email_path)
 
-        # testing purpose
-        # self.urls.append("https://19.201.39.2/|+")
-        # self.urls.append("https://login.verify.bank.transfer.example.com")
-        # self.urls.append("https://google.com")
-        # self.urls.append("http://127.0.0.1:8080/test")
-        # self.urls.append("http://tinyurl.com/time0ut/main.html")
-        # self.urls.append("http://youtube.com@google.com")
-        # self.urls.append("https://malicious.com:9901/bank?redir=skem.com")
+        if not hasattr(self, "urls") or self.urls is None:
+            self.urls = []
         
         self.url_score = {url: 0 for url in self.urls}
         self.connectivity:[bool] = self.__internet_check()
         self.url_split:{str: {str: str}} = self.__url_dissection()
+        self.triggered_checks = {url: [] for url in self.urls}
 
+    # dynamically add risk score
+    def __apply_risk_score(self, check_name, url, score):
+        if check_name in self.RISK_WEIGHTS or check_name in self.RISK_WEIGHTS_OFFLINE or check_name in self.RISK_WEIGHTS_ONLINE:
+            self.url_score[url] += score
+
+        # avoid duplicates if same check fires multiple times
+        if check_name not in self.triggered_checks[url]:
+            self.triggered_checks[url].append(check_name)
+
+        return True
+
+    # check for internet connection
     def __internet_check(self):
         try:
-            create_connection(("www.google.com", 80), timeout=3)
+            s = create_connection(("www.google.com", 80), timeout=3)
+            s.close()
             return True
         except Exception as e:
             print(e)
             return False   
-
+    
+    # split url into: scheme, path, domain, & port
     def __url_dissection(self):
         
         url_split_dict = {url: {} for url in self.urls}
@@ -69,7 +102,6 @@ class UrlCheck(Email):
         return url_split_dict
       
     # extract wordlist
-    # REMEMBER TO CHANGE FILE PATH
     def extract_wordlist(self, filename=None):
         with open(f'Resources/WORDLISTS/url_check/{filename}', "r", encoding="utf-8") as f:
             wordlist = f.read().split()
@@ -84,7 +116,7 @@ class UrlCheck(Email):
             scheme = self.url_split[url]['scheme']
             
             if scheme == 'http':
-                self.url_score[url] += 10
+                self.__apply_risk_score("ssl_check", url, 10)
 
         return True   
 
@@ -99,28 +131,27 @@ class UrlCheck(Email):
             parts = domain.split(".")
 
             if len(parts) == 4 and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
-                self.url_score[url] += 20
+                self.__apply_risk_score("ip_check", url, 20)
 
         return True
 
     # check if it specifies non default ports [20]
     def port_check(self):
         
-        # list (maybe replace it and put in txt file)
         wordlist = self.extract_wordlist('default_ports.txt')
 
         for url in self.urls:
 
             port = self.url_split[url]['port']
 
-            if port not in wordlist and port != None:
-                self.url_score[url] += 20
+            if port is not None and str(port) not in wordlist:
+                self.__apply_risk_score("port_check", url, 20)
 
         return True
 
     # check if url is shorten [10]
     def urlShortener_check(self):
-        # wmtips.com/technologies/url-shorteners/ ################
+        # wmtips.com/technologies/url-shorteners/
         wordlist = self.extract_wordlist('url_shorteners.txt')
 
         for url in self.urls:
@@ -128,7 +159,7 @@ class UrlCheck(Email):
             domain = self.url_split[url]['domain']
 
             if domain in wordlist:
-                self.url_score[url] += 10
+                self.__apply_risk_score("urlShortener_check", url, 10)
 
         return True
 
@@ -142,11 +173,11 @@ class UrlCheck(Email):
             url_length = len(url)
             
             if url_length > 500:
-                self.url_score[url] += 10
+                self.__apply_risk_score("length_check", url, 10)
             
             # find length from sources!!!!! #############################
             elif url_length > 250 or url_length < 30:
-                self.url_score[url] += 5
+                self.__apply_risk_score("length_check", url, 5)
 
         return True
 
@@ -157,19 +188,18 @@ class UrlCheck(Email):
             domain = self.url_split[url]['domain']
             
             if domain.count('.') > 3:
-                self.url_score[url] += 20
+                self.__apply_risk_score("subdomain_check", url, 20)
 
         return True
 
     # detect suspicious special char [20]
     def specialChar_check(self):
 
-        # add more if needed
         wordlist = self.extract_wordlist('suspicious_chars.txt')
 
         for url in self.urls:
             if any(char in wordlist for char in url):
-                self.url_score[url] += 20
+                self.__apply_risk_score("specialChar_check", url, 20)
 
         return True
 
@@ -180,7 +210,7 @@ class UrlCheck(Email):
             domain = self.url_split[url]['domain']
 
             if '@' in domain:
-                self.url_score[url] += 30
+                self.__apply_risk_score("at_symbol_check", url, 30)
 
         return True
 
@@ -191,7 +221,7 @@ class UrlCheck(Email):
             domain = self.url_split[url]['domain']
 
             if domain.startswith('xn--'):
-                self.url_score[url] += 40
+                self.__apply_risk_score("punycode_check", url, 40)
 
         return True
 
@@ -211,11 +241,10 @@ class UrlCheck(Email):
             # check if theres paramters
             if '?' in url:
                 query = url.split('?', 1)[1]
-                params = query.split('=', 1)[0]
-                print(params)
+                params = [p.split('=')[0] for p in query.split('&')]
 
-                if params in wordlist:
-                    self.url_score[url] += 10
+                if any(p in wordlist for p in params):
+                    self.__apply_risk_score("offline_redirection_check", url, 10)
 
         return True
 
@@ -232,7 +261,7 @@ class UrlCheck(Email):
 
                 # redirection occurred 
                 if len(response.history) != 0:
-                    self.url_score[url] += 20
+                    self.__apply_risk_score("online_redirection_check", url, 20)
 
             # website doesn't exist
             except:
@@ -249,14 +278,12 @@ class UrlCheck(Email):
         if self.connectivity == False:
             return False
 
-        # maybe can put this somewhere else ###################################
         API_KEY = 'swkk00k4ww4osgo4wc4wco0sogowcs0o40kg0wo0'
         page_rank_url = "https://openpagerank.com/api/v1.0/getPageRank"
-
         headers = {"API-OPR": API_KEY}
 
         for url in self.urls:
-            
+
             # use domain instead of entire url
             domain = self.url_split[url]['domain']
             params = {"domains[]": domain}
@@ -277,25 +304,24 @@ class UrlCheck(Email):
                     page_rank = json_response['response'][0]['page_rank_decimal']
                     match page_rank:
                         case _ if page_rank <= 3:
-                            self.url_score[url] += 20
+                            self.__apply_risk_score("domain_page_rank_check", url, 20)
                         case _ if page_rank <= 6:
-                            self.url_score[url] += 10
+                            self.__apply_risk_score("domain_page_rank_check", url, 10)
 
                 # domain doesn't exist
                 else:
-                    self.url_score[url] += 20
+                    self.__apply_risk_score("domain_page_rank_check", url, 20)
 
             # website down / no internet
             else:
                 return False
-        
+
         return True
 
     # checking domain age [20]
     def domain_age_check(self):
         for url in self.urls:
             subdomain = None
-            placeholder = ''
 
             domain = self.url_split[url]['domain']
             split_domain = domain.split('.')
@@ -322,31 +348,27 @@ class UrlCheck(Email):
                     rdap_url = f"https://rdap.org/domain/{subdomain}"
                     rdap_output = get(rdap_url, timeout = 10)
 
-
+                # get domain data
                 data = rdap_output.json()
                 
-                from datetime import datetime, timezone
                 registration_date = next(
                     e["eventDate"] for e in data["events"]
                     if e["eventAction"] == "registration"
                 )
 
-                # parse ISO timestamp
-                registered_at = datetime.fromisoformat(
-                    registration_date.replace("Z", "+00:00")
-                )
-
-                # calculate age
-                now = datetime.now(timezone.utc)
+                # determine domain age
+                registered_at = datetime.datetime.fromisoformat(registration_date.replace("Z", "+00:00"))
+                now = datetime.datetime.now(datetime.timezone.utc)
                 age = now - registered_at
 
                 # https://dnsrf.org/blog/phishing-attacks--newly-registered-domains-still-a-prominent-threat
                 if age.days <= 4:
-                    self.url_score[url] += 20
+                    self.__apply_risk_score("domain_age_check", url, 20)
 
             # website doesn't exist
             except Exception as e:
                 print(f"RDAP failed for {domain}: {e}")
+                continue
         
         return True
 
@@ -384,18 +406,22 @@ class UrlCheck(Email):
                 
                 match highest_score:
                     case 'malicious':
-                        self.url_score[url] += 50
+                        self.__apply_risk_score("virus_total", url, 50)
                     
                     case 'suspicious':
-                        self.url_score[url] += 50
+                        self.__apply_risk_score("virus_total", url, 50)
 
             except Exception as e:
                 print(e)
+                continue
 
         return True
 
 
     def run_all_checks(self):
+        
+        max_score = 0
+
         self.ssl_check()
         self.ip_check()
         self.port_check()
@@ -409,33 +435,31 @@ class UrlCheck(Email):
         # double confirm the connectivity to ensure no delay
         if self.connectivity == False:
             self.offline_redirection_check()
+            max_score = sum(self.RISK_WEIGHTS.values()) + sum(self.RISK_WEIGHTS_OFFLINE.values())
         else:
             self.online_redirection_check()
             self.domain_page_rank_check()
             self.domain_age_check()
             self.virus_total()
+            max_score = sum(self.RISK_WEIGHTS.values()) + sum(self.RISK_WEIGHTS_ONLINE.values())
 
-        return self.url_score, self.connectivity
+        return max_score, self.url_score, self.connectivity, self.triggered_checks
 
 
 # calculate risk score (score/total possible score)
-def risk_score_calculate(url_risk_scores:dict, connectivity:bool):
+def risk_score_calculate(max_score:int, url_risk_scores:dict, connectivity:bool, triggered_checks:dict):
 
     final_url_score = {url: 0 for url in url_risk_scores}
-
-    if connectivity == True:
-        max_score = 280
-    else:
-        max_score = 240
 
     for url, score in url_risk_scores.items():
 
         percentage = score/max_score * 100
         final_url_score[url] = round(percentage, 2)
 
-    print(final_url_score)
-    return final_url_score
+    ranked_url = sorted(final_url_score.items(), key=lambda item: item[1], reverse=True)
+
+    return final_url_score, triggered_checks, ranked_url
 
 u = UrlCheck("Resources/DATASET/URL Checker_3.eml")
-url_scores, internet_connection = u.run_all_checks()
-risk_score_calculate(url_scores, internet_connection)
+max_score, url_scores, internet_connection, triggered_checks = u.run_all_checks()
+risk_score_calculate(max_score, url_scores, internet_connection, triggered_checks)
