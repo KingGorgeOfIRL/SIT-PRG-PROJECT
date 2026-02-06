@@ -1,4 +1,5 @@
 from os import listdir, remove, path
+from typing import Set, Dict
 from zipfile import ZipFile
 from email.utils import parsedate_to_datetime, parseaddr
 from LangAnalysis import Email
@@ -12,22 +13,26 @@ class EmailVerifier:
         "suspicious_pattern": 2,
         "lookalike_domain": 4,
         "brand_impersonation": 4,
-        # "reply_to_mismatch": 3,
         "suspicious_domain_structure": 1,
         "sender_username_suspicious": 2,
     }
 
     def __init__(self, email):
-        self.email = email
-        self.risk_score = 0
-        self.flags = {}
-        self.max_risk_score = sum(self.RISK_WEIGHTS.values())
+        self.email: Email = email
+        self.risk_score: int = 0
+        self.flags: Dict[str,bool] = {}
+        self.max_risk_score: int = sum(self.RISK_WEIGHTS.values())
         #loads trusted emails, domains and known companies from files
-        self.trusted_emails = self.load_wordlist("resources/WORDLISTS/email_verify/trusted_emails.txt")
-        self.trusted_domains = self.load_wordlist("resources/WORDLISTS/email_verify/domains.txt")
-        self.known_company = self.load_wordlist("resources/WORDLISTS/email_verify/companies.txt")
-        self.known_suswords = self.load_wordlist("Resources/WORDLISTS/email_verify/suspisciouswords.txt")
+        self.trusted_emails: Set[str] = self.load_wordlist("resources/WORDLISTS/email_verify/trusted_emails.txt")
+        self.trusted_domains: Set[str] = self.load_wordlist("resources/WORDLISTS/email_verify/domains.txt")
+        self.known_company: Set[str] = self.load_wordlist("resources/WORDLISTS/email_verify/companies.txt")
+        self.known_suswords: Set[str] = self.load_wordlist("Resources/WORDLISTS/email_verify/suspisciouswords.txt")
+        
         #extract sender info
+        
+        self.display_name: str
+        self.sender_email: str
+        self.sender_domain: str
         self.display_name, self.sender_email = self.extract_sender_info()
         self.sender_domain = self.extract_domain(self.sender_email)
 
@@ -173,19 +178,6 @@ class EmailVerifier:
             self.flags["username_domain_mismatch"] = True
             self.risk_score += 2
 
-    # def reply_to_mismatch_check(self):
-    #     #gets reply-to header if it exists
-    #     reply_to = self.email.headers.get("reply-to", "")
-
-    #     if not reply_to:
-    #         return
-
-    #     reply_to_domain = self.extract_domain(reply_to)
-
-    #     if reply_to_domain and reply_to_domain != self.sender_domain:
-    #         self.flags["reply_to_mismatch"] = True
-    #         self.risk_score += self.RISK_WEIGHTS["reply_to_mismatch"]
-
     def get_risk_percentage(self):
         if self.risk_score <= 0:
             return 0.0
@@ -212,7 +204,6 @@ class EmailVerifier:
         self.domain_pattern_check()
         self.lookalike_domain_check()
         self.brand_in_domain_check()
-        # self.reply_to_mismatch_check()
         self.username_domain_mismatch()
 
         return self._final_result()
