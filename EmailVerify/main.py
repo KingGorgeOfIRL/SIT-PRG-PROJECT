@@ -3,7 +3,7 @@ from typing import Set, Dict
 from zipfile import ZipFile
 from email.utils import parsedate_to_datetime, parseaddr
 from LangAnalysis import Email
-
+ 
 class EmailVerifier:
     #centralised risk weights
     #easier for me to compute max risk score.
@@ -11,7 +11,6 @@ class EmailVerifier:
         "unknown_sender": 1,
         "display_name_mismatch": 3,
         "suspicious_pattern": 2,
-        "lookalike_domain": 4,
         "brand_impersonation": 4,
         "suspicious_domain_structure": 1,
         "sender_username_suspicious": 2,
@@ -73,11 +72,12 @@ class EmailVerifier:
     #checks if sender domain is trusted
     def domain_whitelist_check(self):
         domain = self.sender_domain
-
+        print(domain)
         for trusted in self.trusted_domains:
+            print(trusted)
             if domain == trusted or domain.endswith("." + trusted):
                 self.flags["whitelisted domain"] = True
-                self.risk_score -= 2
+                self.risk_score -= 3
                 return
 
         self.flags["whitelisted domain"] = False
@@ -156,9 +156,9 @@ class EmailVerifier:
             dist = self.edit_distance(self.sender_domain, trusted)
             if 0 < dist <= 2:
                 self.flags["lookalike_domain"] = True
-                self.risk_score += self.RISK_WEIGHTS["lookalike_domain"]
-                return
-                   
+                self.risk_score += 10
+                return    
+
     #checks if domain is impersonating a domain e.g. suspisciouspaypal.com
     def brand_in_domain_check(self):
         for company in self.known_company:
@@ -181,7 +181,9 @@ class EmailVerifier:
     def get_risk_percentage(self):
         if self.risk_score <= 0:
             return 0.0
-        return (self.risk_score / self.max_risk_score) * 100       
+
+        percentage = (self.risk_score / self.max_risk_score) * 100
+        return min(percentage, 100.0)
 
     def _final_result(self):
         return {
