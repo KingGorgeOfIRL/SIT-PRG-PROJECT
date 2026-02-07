@@ -226,5 +226,29 @@ class Email:
 
         return body_text, attachments, urls
     
+    #convert a single raw email file into a .eml file.
+    def convert_to_eml(input_path: str, output_path: str = None) -> str:
+
+        if not os.path.isfile(input_path):
+            raise FileNotFoundError(f"File not found: {input_path}")
+
+        # If no output path provided, replace extension with .eml
+        if output_path is None:
+            base_name = os.path.splitext(input_path)[0]
+            output_path = base_name + ".eml"
+
+        with open(input_path, "rb") as src:
+            raw_data = src.read()
+
+        with open(output_path, "wb") as dst:
+            dst.write(raw_data)
+
+        return output_path
+    
+    # Sample testing below
+    # new_file = convert_to_eml("Resources/RAWEML/01004.f3ce5cdf52dbe7ed22354f1ab95376d6")
+    # print("Created:", new_file)
+
+    
     def __repr__(self):
         return f"Email<Subject:{self.subject},Sender:{self.sender}>"
