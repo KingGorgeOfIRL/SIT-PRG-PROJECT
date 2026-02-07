@@ -13,7 +13,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 from email.parser import Parser
 from email import policy
-
+from LangAnalysis import *
 def get_docChecking_scores():
     
     # Grabs the files and places them in a list called "list_of_files"
@@ -28,7 +28,7 @@ def get_docChecking_scores():
 
     return dict_result
     
-
+print(get_docChecking_scores())
 
 
 def get_urlCheck_scores():
@@ -52,7 +52,7 @@ def get_urlCheck_scores():
 
     return overall_percentage
 
-
+print(get_urlCheck_scores)
 
 def get_emailVerify_scores():
     # edit_distance() is used for detecting sus typos like g00gle.com instead of google.com (Levenshtein edit distance)
@@ -67,7 +67,12 @@ def get_emailVerify_scores():
 
 
 
-def get_langAnalysis_scores():
+def get_langAnalysis_scores(email:Email):
+    matrix = init_keyword_matrix()
+    result = email_language_risk(email=email,
+                                 matrix=matrix,
+                                 total_weightage=40,
+                                 base_confidence_score=100)
     pass
 
 
@@ -436,13 +441,6 @@ class EmailPieApp:
     def hide_LangAnalysis(self):
         self.LangAnalysis_label.pack_forget()
         self.LangAnalysis_listbox.pack_forget()
-
-
-
-
-
-
-
 
 
 if __name__ == "__main__":
