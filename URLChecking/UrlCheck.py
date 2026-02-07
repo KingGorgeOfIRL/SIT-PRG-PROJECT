@@ -3,7 +3,7 @@ from requests import get, post
 import datetime
 from vtapi3 import VirusTotalAPIUrls
 from json import loads
-from LangAnalysis import Email
+from LangAnalysis.main import Email
 
 class UrlCheck(Email):
 

@@ -111,6 +111,7 @@ def get_email_content(file_path):
             body += part.get_payload(decode=True).decode('utf-8', errors='ignore')
     return subject, body
 
+
 class EmailPieApp:
     def __init__(self, root):
         self.root = root
