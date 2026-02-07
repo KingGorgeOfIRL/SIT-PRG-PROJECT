@@ -14,6 +14,7 @@ class EmailVerifier:
         "brand_impersonation": 4,
         "suspicious_domain_structure": 1,
         "sender_username_suspicious": 2,
+        "local_part_suspicious": 2,
     }
 
     def __init__(self, email):
@@ -156,7 +157,7 @@ class EmailVerifier:
             dist = self.edit_distance(self.sender_domain, trusted)
             if 0 < dist <= 2:
                 self.flags["lookalike_domain"] = True
-                self.risk_score += 10
+                self.risk_score += 20
                 return    
 
     #checks if domain is impersonating a domain e.g. suspisciouspaypal.com
