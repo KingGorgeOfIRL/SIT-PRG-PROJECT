@@ -25,6 +25,31 @@ def get_lemmatizer_wordlist() -> Dict[str, str]:
             "Failed to load lemmatization wordlist"
         ) from e
 
+@lru_cache(maxsize=64)
+def get_multipliers(title_weight:int = 40,suspect_length:int=300) -> tuple[Dict[int,float],int,int]:
+    num_lines = int(suspect_length / 10)
+
+    if not (0 <= title_weight <= 100) or suspect_length <= 0:
+        raise ValueError("inputs out of value bounds")
+
+    num_lines = max(1, suspect_length // 10)
+
+    # Number of decay steps (at least 1)
+    steps = max(1, (title_weight // 10) - 1)
+
+    # Step size in lines (at least 1)
+    step_size = max(1, num_lines // steps)
+
+    line_multiplier: Dict[int, float] = {0: 1.0 + (title_weight / 100.0)}
+
+    # Build decreasing multipliers
+    for step_idx in range(1, steps + 2):
+        line_num = step_idx * step_size
+        mult = 1.0 + ((title_weight / 10.0) - step_idx) / 10.0
+        line_multiplier[line_num] = max(0.0, mult)  # optional clamp
+
+    return line_multiplier, suspect_length, num_lines
+
 def tokenise(text: str) -> List[List[str]]:
     #Strip, simplify, and tokenise text using a brute-force wordlist lemmatizer.
     tokenised: List[str] = []

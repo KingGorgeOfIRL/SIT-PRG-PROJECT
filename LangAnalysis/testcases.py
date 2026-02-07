@@ -6,7 +6,6 @@ from unittest.mock import patch
 # Replace this with the module name that contains your code
 import main as m
 
-
 class TestUtilities(unittest.TestCase):
     def test_safe_filename_sanitizes(self):
         self.assertEqual(m._safe_filename("../evil.txt"), "evil.txt")
