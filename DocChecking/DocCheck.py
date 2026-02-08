@@ -421,10 +421,10 @@ def risk_score_calculate(max_score: int, file_risk_scores: dict, connectivity: b
 
     ranked_files = sorted(final_file_score.items(), key=lambda x: x[1], reverse=True)
 
-    print(final_file_score, triggered_checks)
+    # print(final_file_score, triggered_checks)
     return final_file_score, triggered_checks, ranked_files
 
 
-checker = DocCheck("Resources/DATASET/DocCheck3.eml")
-max_score, file_score, internet_connection, triggered_checks = checker.run_all_checks()
-risk_score_calculate(max_score, file_score, internet_connection, triggered_checks)
+# checker = DocCheck("Resources/DATASET/DocCheck3.eml")
+# max_score, file_score, internet_connection, triggered_checks = checker.run_all_checks()
+# risk_score_calculate(max_score, file_score, internet_connection, triggered_checks)

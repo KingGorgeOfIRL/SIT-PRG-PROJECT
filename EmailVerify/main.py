@@ -211,13 +211,13 @@ class EmailVerifier:
 
         return self._final_result()
 
-#test
-email = Email("Resources/DATASET/lennontest.eml")
-verifier = EmailVerifier(email)
+# #test
+# email = Email("Resources/DATASET/lennontest.eml")
+# verifier = EmailVerifier(email)
 
-# print("Subject:", email.subject)
-# print("Sender:", email.sender)
-# print("Domain:", verifier.sender_domain)
-# print("Display name:", verifier.display_name)
-result = verifier.run_verification()
-print(result)
+# # print("Subject:", email.subject)
+# # print("Sender:", email.sender)
+# # print("Domain:", verifier.sender_domain)
+# # print("Display name:", verifier.display_name)
+# result = verifier.run_verification()
+# print(result)

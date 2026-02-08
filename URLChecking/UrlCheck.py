@@ -460,6 +460,6 @@ def risk_score_calculate(max_score:int, url_risk_scores:dict, connectivity:bool,
 
     return final_url_score, triggered_checks, ranked_url
 
-u = UrlCheck("Resources/DATASET/URL Checker_3.eml")
-max_score, url_scores, internet_connection, triggered_checks = u.run_all_checks()
-risk_score_calculate(max_score, url_scores, internet_connection, triggered_checks)
+# u = UrlCheck("Resources/DATASET/URL Checker_3.eml")
+# max_score, url_scores, internet_connection, triggered_checks = u.run_all_checks()
+# risk_score_calculate(max_score, url_scores, internet_connection, triggered_checks)

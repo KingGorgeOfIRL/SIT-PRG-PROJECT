@@ -1,451 +1,543 @@
-# 45% Language, 55% email, urls no, attachment no
-# 35% Language, 40% email, 25% Url, attachment no
-# 15%, language, 35% email, 25% url, 25% attachment
-
-# The second DocChecking is the class of the folder DocChecking
-from DocChecking.DocCheck import DocChecking, risk_score_calculate
-from URLChecking.UrlCheck import UrlCheck
-#from EmailVerify.main import EmailVerifier, Email
-
 import tkinter as tk
-from tkinter import ttk, filedialog, scrolledtext
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import matplotlib.pyplot as plt
-from email.parser import Parser
-from email import policy
-from LangAnalysis import *
-def get_docChecking_scores():
-    
-    # Grabs the files and places them in a list called "list_of_files"
-    #object = DocChecking("Resources/DATASET/Project Proposal.eml")
-    #list_of_files = object.files
+from tkinter import filedialog, messagebox, ttk
+import os
+import threading
+
+# importing from EmailScore
+from EmailScore import *
+from EmailVerify.main import Email
 
 
-    checker = DocChecking("Resources/DATASET/DocCheck3.eml")
-    file_score, internet_connection = checker.run_all_checks()
-    dict_result = risk_score_calculate(file_score, internet_connection)
+class EmailScannerGUI(tk.Tk):
+    def __init__(self):
+        super().__init__()
 
+        self.title("Email Scanner")
+        self.geometry("900x500")
 
-    return dict_result
-    
-print(get_docChecking_scores())
+        self.folder_path = tk.StringVar()
 
+        self.email_cache = {}
 
-def get_urlCheck_scores():
-    # If score is higher than 100 (Maximum score for URLchecking is around 190), flag it as suspicious
-    # Note that self.urls.append() is used to add URLs to self.urls, if self.urls is empty self.url_score stays empty and there will be no loop
+        # variables for canceling the scan
+        self.cancel_event = threading.Event()
+        self.total_emails = 0
+        self.processed_emails = 0
 
-    email = UrlCheck("Resources\DATASET\story.eml")
+        self.create_widgets()
 
-    # Gets the dictionary of all the urls(keys) and the scores(values)
-    score_dict = email.url_score
+    def create_widgets(self):
+        # Top controls
+        top_frame = tk.Frame(self)
+        top_frame.pack(fill="x", padx=10, pady=5)
 
-    total_score = 0
+        tk.Button(
+            top_frame,
+            text="Select Folder",
+            command=self.select_folder
+        ).pack(side="left")
 
-    # Gets only the scores in the dictionary, and adds them all up
-    for scores in score_dict.values():
-        scores = int(scores)
-        total_score = total_score + scores
+        tk.Button(
+            top_frame,
+            text="Scan Single Email",
+            command=self.scan_single_email
+        ).pack(side="left", padx=5)
 
-    # Gets the percentage score
-    overall_percentage = (total_score / 190) * 100
+        tk.Label(
+            top_frame,
+            textvariable=self.folder_path,
+            wraplength=600,
+            anchor="w"
+        ).pack(side="left", padx=10)
 
-    return overall_percentage
+        tk.Button(
+            top_frame,
+            text="Scan Emails",
+            command=self.start_scan
+        ).pack(side="right")
 
-print(get_urlCheck_scores)
+        # Table
+        columns = ("file", "sender", "subject", "risk", "level")
 
-def get_emailVerify_scores():
-    # edit_distance() is used for detecting sus typos like g00gle.com instead of google.com (Levenshtein edit distance)
-    # To use the EmailVerifier class you need to give normalize_domain() an EmailVerifier object, not a string
-    #email = Email("Resources/DATASET/Project Proposal.eml")
-    #verifier = EmailVerifier(email)
-    
-    #result = verifier.run_verification()
-    #print(result)
-    pass
-    
-
-
-
-def get_langAnalysis_scores(email:Email):
-    matrix = init_keyword_matrix()
-    result = email_language_risk(email=email,
-                                 matrix=matrix,
-                                 total_weightage=40,
-                                 base_confidence_score=100)
-    pass
-
-
-
-
-
-# print(f"Percentage from UrlCheck : {get_urlCheck_scores()}%")
-# print(f"Percentage from DocChecking : {get_docChecking_scores()}%")
-# get_emailVerify_scores()
-# get_docChecking_scores()
-
-
-##############################                 End of scores gathering section, start of GUI section                 ###########################################################
-
-
-
-# Example results
-def analyze_email(file_path):
-    return (
-        {"Safe": 70, "Suspicious": 30},
-        {"Trusted": 50, "Untrusted": 50},
-        {"High Risk": 20, "Medium Risk": 50, "Low Risk": 30},
-        {"Phishing": 10, "Spam": 20, "Legit": 70}
-    )
-
-# Dummy function to extract email content
-def get_email_content(file_path):
-    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-        raw = Parser(policy=policy.default).parse(f)
-    subject = raw.get('Subject', '')
-    body = ''
-    for part in raw.walk():
-        if 'text/plain' in part.get_content_type():
-            body += part.get_payload(decode=True).decode('utf-8', errors='ignore')
-        elif 'text/html' in part.get_content_type():
-            body += part.get_payload(decode=True).decode('utf-8', errors='ignore')
-    return subject, body
-
-
-class EmailPieApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Email Analysis Pie Charts")
-        self.root.geometry("1200x600")
-
-        # Top-left: overall risk, top-right: selected chart, right: email content
-        self.left_frame = tk.Frame(root)
-        self.left_frame.pack(side='left', fill='both', expand=True)
-
-        self.right_frame = tk.Frame(root)
-        self.right_frame.pack(side='right', fill='both', expand=True)
-
-        # Dropdown menu for pie charts
-        self.chart_names = ["Attachment Validation", "URL Validator", "Email Validator", "Language Analysis"]
-        self.current_chart = tk.StringVar()
-        self.current_chart.set(self.chart_names[0])
-        self.dropdown = tk.OptionMenu(self.left_frame, self.current_chart, *self.chart_names, command=self.update_chart_display)
-        self.dropdown.pack(pady=10)
-
-        # Button to select email file
-        self.button = tk.Button(self.left_frame, text="Select Email File", command=self.load_email)
-        self.button.pack(pady=5)
-
-        # Frame for pie charts
-        self.charts_frame = tk.Frame(self.left_frame)
-        self.charts_frame.pack(fill='both', expand=True)
-
-        # Overall risk pie chart
-        self.fig_overall, self.ax_overall = plt.subplots(figsize=(4,4))
-        self.canvas_overall = FigureCanvasTkAgg(self.fig_overall, master=self.charts_frame)
-        self.canvas_overall.get_tk_widget().pack(side='left', fill='both', expand=True, padx=5)
-
-        # Selected chart pie chart
-        self.fig_chart, self.ax_chart = plt.subplots(figsize=(4,4))
-        self.canvas_chart = FigureCanvasTkAgg(self.fig_chart, master=self.charts_frame)
-        self.canvas_chart.get_tk_widget().pack(side='left', fill='both', expand=True, padx=5)
-
-        # Email info (right side)
-        self.email_filename_label = tk.Label(self.right_frame, text="No email selected", anchor='w')
-        self.email_filename_label.pack(fill='x', padx=10, pady=5)
-
-        self.email_content_text = scrolledtext.ScrolledText(self.right_frame, wrap='word')
-        self.email_content_text.pack(fill='both', expand=True, padx=10, pady=5)
-
-        # Attachment data for pie chart
-        self.attachment_scores = {}
-
-        ############################ Attachment part (DocCheck) ########################################
-
-        # Attachment list label
-        self.attachment_label = tk.Label(
-            self.charts_frame,
-            text="Attachments",
-            font=("Arial", 10, "bold")
+        self.tree = ttk.Treeview(
+            self,
+            columns=columns,
+            show="headings",
+            height=18
         )
 
-        # Attachment list box
-        self.attachment_listbox = tk.Listbox(
-            self.charts_frame,
-            width=60,
-            height=10,        # visible rows
-            activestyle="none"
+        self.tree.bind("<Double-1>", self.open_email_details)
+
+        self.tree.heading("file", text="File")
+        self.tree.heading("sender", text="Sender")
+        self.tree.heading("subject", text="Subject")
+        self.tree.heading("risk", text="Risk %")
+        self.tree.heading("level", text="Risk Level")
+
+        self.tree.column("file", width=180)
+        self.tree.column("sender", width=200)
+        self.tree.column("subject", width=260)
+        self.tree.column("risk", width=80, anchor="center")
+        self.tree.column("level", width=120, anchor="center")
+
+        self.tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Color tags
+        self.tree.tag_configure("low", background="#d4edda")
+        self.tree.tag_configure("medium", background="#fff3cd")
+        self.tree.tag_configure("high", background="#f8d7da")
+
+        # Loading overlay
+        self.loading_frame = tk.Frame(self, bg="#000000")
+
+        self.loading_label = tk.Label(
+            self.loading_frame,
+            text="Scanning emails...",
+            fg="white",
+            bg="#000000",
+            font=("Arial", 14)
         )
 
-        ############################ Language Analysis part (LangAnalysis) ########################################
-
-        # Language Analysis list label
-        self.LangAnalysis_label = tk.Label(
-            self.charts_frame,
-            text="Language Analysis",
-            font=("Arial", 10, "bold")
+        self.progress = ttk.Progressbar(
+            self.loading_frame,
+            mode="determinate",
+            length=300
         )
 
-        # Language Analysis box
-        self.LangAnalysis_listbox = tk.Listbox(
-            self.charts_frame,
-            width=60,
-            height=10,        # visible rows
-            activestyle="none"
+        self.progress_text = tk.Label(
+            self.loading_frame,
+            text="0 / 0",
+            fg="white",
+            bg="#000000",
+            font=("Arial", 10)
         )
 
+        self.cancel_button = tk.Button(
+            self.loading_frame,
+            text="Cancel",
+            command=self.cancel_scan,
+            bg="#c0392b",
+            fg="white"
+        )
 
+        self.loading_label.pack(pady=10)
+        self.progress.pack(pady=5)
+        self.progress_text.pack()
+        self.cancel_button.pack(pady=10)
 
-        # Store chart data
-        self.chart_data = [
-            {"Safe": 100},
-            {"Trusted": 100},
-            {"High Risk": 100},
-            {"Phishing": 100}
-        ]
+    #---------------------------------------- Scanning folder --------------------------------------------#
 
-        # Draw initial charts
-        self.draw_chart(0)
-        self.draw_overall_chart()
+    def select_folder(self):
+        path = filedialog.askdirectory()
+        if path:
+            self.folder_path.set(path)
 
-    def load_email(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Email files", "*.eml")])
-        if file_path:
-            
-            # Get attachment data from docChecking
-            self.attachment_scores = get_docChecking_scores()
-
-            # Update chart data
-            self.chart_data = analyze_email(file_path)
-            self.update_chart_display(self.current_chart.get())
-            self.draw_overall_chart()
-
-            # Show filename
-            self.email_filename_label.config(text=f"Selected file: {file_path.split('/')[-1]}")
-
-            # Show email content
-            subject, body = get_email_content(file_path)
-            self.email_content_text.delete(1.0, tk.END)
-            self.email_content_text.insert(tk.END, f"Subject: {subject}\n\n{body}")
-
-    def draw_chart(self, index):
-        self.ax_chart.clear()
-        selected = self.current_chart.get()
-
-        # Attachment Validation chart
-        if selected == "Attachment Validation":
-            self.draw_attachment_chart()
-
-        # URL Validation chart
-        elif selected == "URL Validator":
-            self.draw_url_chart()
-
-
-        # Email Validator chart
-        elif selected == "Email Validator":
-            self.draw_email_chart()
-
-
-        # Language Analysis chart
-        elif selected == "Language Analysis":
-            self.draw_language_chart()
-
-        self.canvas_chart.draw()
-
-############################ 4 Pie chart display functions ######################################################
-
-    def draw_attachment_chart(self):
-        if not self.attachment_scores:
-            self.ax_chart.text(
-                0.5, 0.5, "No attachments",
-                ha='center', va='center', fontsize=12
-            )
+    def start_scan(self):
+        if not self.folder_path.get():
+            messagebox.showerror("Error", "Please select a folder first")
             return
 
-        labels = list(self.attachment_scores.keys())
-        sizes = list(self.attachment_scores.values())
+        for item in self.tree.get_children():
+            self.tree.delete(item)
 
-        colors = []
-        for s in sizes:
-            if s < 30:
-                colors.append("green")
-            elif s < 70:
-                colors.append("orange")
-            else:
-                colors.append("red")
+        folder = self.folder_path.get()
+        eml_files = [f for f in os.listdir(folder) if f.lower().endswith(".eml")]
 
-        self.ax_chart.pie(
-            sizes,
-            labels=labels,
-            autopct='%1.1f%%',
-            startangle=90,
-            colors=colors
-        )
+        if not eml_files:
+            messagebox.showinfo("Info", "No .eml files found")
+            return
 
-        self.ax_chart.axis('equal')
-        self.ax_chart.set_title("Attachment Risk", fontsize=14, fontweight='bold')
+        self.show_loading(len(eml_files))
 
-
-    def draw_url_chart(self):
-        data = self.chart_data[1]   # {"Trusted": 50, "Untrusted": 50}
-
-        labels = list(data.keys())
-        sizes = list(data.values())
-
-        self.ax_chart.pie(
-            sizes,
-            labels=labels,
-            autopct='%1.1f%%',
-            startangle=90,
-            colors=["green", "red"]
-        )
-
-        self.ax_chart.axis('equal')
-        self.ax_chart.set_title("URL Validator", fontsize=14, fontweight='bold')
-
-
-    def draw_email_chart(self):
-        data = self.chart_data[2]
-
-        labels = list(data.keys())
-        sizes = list(data.values())
-
-        self.ax_chart.pie(
-            sizes,
-            labels=labels,
-            autopct='%1.1f%%',
-            startangle=90
-        )
-
-        self.ax_chart.axis('equal')
-        self.ax_chart.set_title("Email Validator", fontsize=14, fontweight='bold')
-
-
-    def draw_language_chart(self):
-        data = self.chart_data[3]
-
-        labels = list(data.keys())
-        sizes = list(data.values())
-
-        self.ax_chart.pie(
-            sizes,
-            labels=labels,
-            autopct='%1.1f%%',
-            startangle=90
-        )
-
-        self.ax_chart.axis('equal')
-        self.ax_chart.set_title("Language Analysis", fontsize=14, fontweight='bold')
+        threading.Thread(
+            target=self.scan_folder_worker,
+            args=(eml_files,),
+            daemon=True
+        ).start()
 
 
 
-############################ END OF 4 Pie chart display functions ######################################################
+    def scan_folder(self):
+        folder = self.folder_path.get()
+        eml_files = [f for f in os.listdir(folder) if f.lower().endswith(".eml")]
 
+        if not eml_files:
+            messagebox.showinfo("Info", "No .eml files found")
+            return
 
+        for filename in eml_files:
+            try:
+                path = os.path.join(folder, filename)
+                email = Email(path)
 
+                (
+                    doc_score,
+                    url_score,
+                    email_score,
+                    lang_score,
+                    attachment_flag,
+                    url_flag
+                ) = scoringSystem(email)
 
-    def draw_overall_chart(self):
-        self.ax_overall.clear()
-        # Calculate overall risk percentage
-        total_scores = {"Safe": 0, "Risk": 0}
-        for chart in self.chart_data:
-            # Sum "good" vs "bad"
-            for key, val in chart.items():
-                key_lower = key.lower()
-                if key_lower in ["safe", "trusted", "legit", "low risk"]:
-                    total_scores["Safe"] += val
+                # Final weighted score (used the same formula-ish in EmailScore.py)
+                if not attachment_flag and not url_flag:
+                    final_score = lang_score * 0.45 + email_score * 0.55
+                elif not attachment_flag and url_flag:
+                    final_score = (
+                        lang_score * 0.35 +
+                        email_score * 0.40 +
+                        url_score * 0.25
+                    )
                 else:
-                    total_scores["Risk"] += val
+                    final_score = (
+                        lang_score * 0.15 +
+                        email_score * 0.35 +
+                        url_score * 0.25 +
+                        doc_score * 0.25
+                    )
 
-        # Normalize to 100%
-        total_sum = total_scores["Safe"] + total_scores["Risk"]
-        if total_sum == 0:
-            sizes = [50,50]
-        else:
-            sizes = [total_scores["Safe"] / total_sum * 100, total_scores["Risk"] / total_sum * 100]
+                level, tag = self.risk_level(final_score)
 
-        labels = ["Safe", "Risk"]
-        colors = ["green", "red"]
+                item_id = self.tree.insert(
+                    "",
+                    "end",
+                    values=(
+                        filename,
+                        email.sender,
+                        email.subject,
+                        f"{final_score:.2f}",
+                        level
+                    ),
+                    tags=(tag,)
+                )
 
-        wedges, texts, autotexts = self.ax_overall.pie(
-            sizes, labels=labels, autopct='%1.1f%%', startangle=90, colors=colors
+                # --- Get extra data, URLs and Attachments ---
+                urls = []
+                attachments = []
+
+                try:
+                    # URLs
+                    url_results = get_urlCheck_scores(email)
+                    if isinstance(url_results, dict):
+                        urls = list(url_results.keys())
+
+                    # Attachments
+                    doc_results = get_docChecking_scores(email)
+                    if isinstance(doc_results, dict):
+                        attachments = list(doc_results.keys())
+
+                except Exception:
+                    pass
+
+
+                self.email_cache[item_id] = {
+                    "filename": filename,
+                    "sender": email.sender,
+                    "subject": email.subject,
+                    "body": email.text or "(No email body)",
+                    "risk": f"{final_score:.2f}%",
+                    "level": level,
+                    "urls": urls,
+                    "attachments": attachments
+                }
+
+            except Exception as e:
+                print(f"Error scanning {filename}: {e}")
+
+
+    def scan_folder_worker(self, eml_files):
+        folder = self.folder_path.get()
+
+        for filename in eml_files:
+            if self.cancel_event.is_set():
+                break
+
+            try:
+                path = os.path.join(folder, filename)
+                email = Email(path)
+
+                (
+                    doc_score,
+                    url_score,
+                    email_score,
+                    lang_score,
+                    attachment_flag,
+                    url_flag
+                ) = scoringSystem(email)
+
+                if not attachment_flag and not url_flag:
+                    final_score = lang_score * 0.45 + email_score * 0.55
+                elif not attachment_flag and url_flag:
+                    final_score = (
+                        lang_score * 0.35 +
+                        email_score * 0.40 +
+                        url_score * 0.25
+                    )
+                else:
+                    final_score = (
+                        lang_score * 0.15 +
+                        email_score * 0.35 +
+                        url_score * 0.25 +
+                        doc_score * 0.25
+                    )
+
+                level, tag = self.risk_level(final_score)
+
+                self.after(
+                    0,
+                    self.add_result_row,
+                    filename,
+                    email,
+                    final_score,
+                    level,
+                    tag
+                )
+
+            except Exception as e:
+                print(f"Error scanning {filename}: {e}")
+
+            self.processed_emails += 1
+            self.after(0, self.update_progress)
+
+        self.after(0, self.hide_loading)
+
+
+    def scan_folder_wrapper(self):
+        try:
+            self.scan_folder()
+        finally:
+            self.after(0, self.hide_loading)
+
+
+    #---------------------------------------- Scanning a single email --------------------------------------------#
+
+
+    def scan_single_email(self):
+        file_path = filedialog.askopenfilename(
+            title="Select a .eml file",
+            filetypes=[("Email Files", "*.eml")]
         )
-        self.ax_overall.axis('equal')
-        self.ax_overall.set_title("Overall Risk", fontsize=14, fontweight='bold')
-        self.ax_overall.legend(wedges, [f"{legend}: {s:.1f}%" for legend, s in zip(labels, sizes)],
-                               title="Legend", loc="lower center", bbox_to_anchor=(0.5, -0.1),
-                               ncol=2, frameon=False)
+        
+        if not file_path:
+            return
 
-        self.canvas_overall.draw()
+        # Clear previous results
+        for item in self.tree.get_children():
+            self.tree.delete(item)
 
-    def update_chart_display(self, selected_name):
-        index = self.chart_names.index(selected_name)
-        self.draw_chart(index)
-        self.draw_overall_chart()
+        self.show_loading(1)  # Only 1 email to scan
 
-        # Show attachments only for Attachment Validation
-        if selected_name == "Attachment Validation":
-            self.show_attachments()
-        else:
-            self.hide_attachments()
-
-        # Show attachments only for Language Analysis Validation
-        if selected_name == "Language Analysis":
-            self.show_LangAnalysis()
-        else:
-            self.hide_LangAnalysis()
+        # Start scanning in a thread to avoid freezing
+        threading.Thread(
+            target=self.scan_single_worker,
+            args=(file_path,),
+            daemon=True
+        ).start()
 
 
+    def scan_single_worker(self, file_path):
+        if self.cancel_event.is_set():
+            self.after(0, self.hide_loading)
+            return
 
-    def show_attachments(self):
-        self.attachment_label.pack(pady=(10, 0))
-        self.attachment_listbox.pack(
-            fill="both",
-            expand=True,
-            padx=10,
-            pady=5
-        )
+        try:
+            email = Email(file_path)
 
-        self.attachment_listbox.delete(0, tk.END)
+            (
+                doc_score,
+                url_score,
+                email_score,
+                lang_score,
+                attachment_flag,
+                url_flag
+            ) = scoringSystem(email)
 
-        if not self.attachment_scores:
-            self.attachment_listbox.insert(tk.END, "No attachments found")
-        else:
-            for name, score in self.attachment_scores.items():
-                self.attachment_listbox.insert(
-                    tk.END, f"{name} — {score:.1f}% risk"
+            if not attachment_flag and not url_flag:
+                final_score = lang_score * 0.45 + email_score * 0.55
+            elif not attachment_flag and url_flag:
+                final_score = (
+                    lang_score * 0.35 +
+                    email_score * 0.40 +
+                    url_score * 0.25
+                )
+            else:
+                final_score = (
+                    lang_score * 0.15 +
+                    email_score * 0.35 +
+                    url_score * 0.25 +
+                    doc_score * 0.25
+                )
+
+            level, tag = self.risk_level(final_score)
+
+            self.after(
+                0,
+                self.add_result_row,
+                os.path.basename(file_path),
+                email,
+                final_score,
+                level,
+                tag
             )
 
+        except Exception as e:
+            print(f"Error scanning {file_path}: {e}")
 
-    def hide_attachments(self):
-        self.attachment_label.pack_forget()
-        self.attachment_listbox.pack_forget()
+        self.processed_emails += 1
+        self.after(0, self.update_progress)
+        self.after(0, self.hide_loading)
 
 
 
-    ############################ Language Analysis part (LangAnalysis) ########################################
+    def open_email_details(self, event):
+        selected = self.tree.selection()
+        if not selected:
+            return
 
-    def show_LangAnalysis(self):
-        self.LangAnalysis_label.pack(pady=(10, 0))
-        self.LangAnalysis_listbox.pack(fill="x", padx=10, pady=5)
+        data = self.email_cache.get(selected[0])
+        if not data:
+            return
 
-        self.LangAnalysis_listbox.delete(0, tk.END)
+        window = tk.Toplevel(self)
+        window.title(f"Email Details - {data['filename']}")
+        window.geometry("900x550")
 
-        if not self.list_of_files:
-            self.LangAnalysis_listbox.insert(tk.END, "No language analysis found")
+        # ===== Header =====
+        header = tk.Frame(window)
+        header.pack(fill="x", padx=10, pady=5)
+
+        info = [
+            ("From:", data["sender"]),
+            ("Subject:", data["subject"]),
+            ("Risk:", f"{data['risk']} ({data['level']})")
+        ]
+
+        for i, (label, value) in enumerate(info):
+            tk.Label(header, text=label, font=("Arial", 10, "bold")).grid(row=i, column=0, sticky="w")
+            tk.Label(header, text=value, wraplength=700).grid(row=i, column=1, sticky="w")
+
+        ttk.Separator(window, orient="horizontal").pack(fill="x", pady=5)
+
+        # ===== Main Content =====
+        main = tk.Frame(window)
+        main.pack(fill="both", expand=True)
+
+        # --- Email Body ---
+        body_frame = tk.LabelFrame(main, text="Email Body")
+        body_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        body_scroll = tk.Scrollbar(body_frame)
+        body_scroll.pack(side="right", fill="y")
+
+        body_text = tk.Text(
+            body_frame,
+            wrap="word",
+            yscrollcommand=body_scroll.set
+        )
+        body_text.pack(fill="both", expand=True)
+        body_scroll.config(command=body_text.yview)
+
+        body_text.insert("1.0", data["body"])
+        self.highlight_suspicious_words(body_text, data["body"])
+        body_text.config(state="disabled")
+
+
+
+    def highlight_suspicious_words(self, text_widget, body_text):
+        try:
+            matrix = init_keyword_matrix()
+            suspicious_words = set()
+
+            for category in matrix.values():
+                for word in category:
+                    suspicious_words.add(word.lower())
+
+            for word in suspicious_words:
+                start = "1.0"
+                while True:
+                    pos = text_widget.search(word, start, stopindex="end", nocase=True)
+                    if not pos:
+                        break
+
+                    end = f"{pos}+{len(word)}c"
+                    text_widget.tag_add("suspicious", pos, end)
+                    start = end
+
+            text_widget.tag_config(
+                "suspicious",
+                background="#fff3cd",
+                foreground="black"
+            )
+
+        except Exception:
+            pass
+
+
+    def show_loading(self, total):
+        self.total_emails = total
+        self.processed_emails = 0
+        self.cancel_event.clear()
+
+        self.progress["maximum"] = total
+        self.progress["value"] = 0
+        self.progress_text.config(text=f"0 / {total}")
+
+        self.loading_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.update_idletasks()
+
+
+    def hide_loading(self):
+        self.loading_frame.place_forget()
+
+
+    def cancel_scan(self):
+        self.cancel_event.set()
+        self.loading_label.config(text="Cancelling…")
+
+
+    def update_progress(self):
+        self.progress["value"] = self.processed_emails
+        self.progress_text.config(
+            text=f"{self.processed_emails} / {self.total_emails}"
+        )
+
+
+    def add_result_row(self, filename, email, score, level, tag):
+        item_id = self.tree.insert(
+            "",
+            "end",
+            values=(
+                filename,
+                email.sender,
+                email.subject,
+                f"{score:.2f}",
+                level
+            ),
+            tags=(tag,)
+        )
+
+        self.email_cache[item_id] = {
+            "filename": filename,
+            "sender": email.sender,
+            "subject": email.subject,
+            "body": email.text or "(No email body)",
+            "risk": f"{score:.2f}%",
+            "level": level
+        }
+
+
+
+
+    @staticmethod
+    def risk_level(score):
+        if score < 15:
+            return "Low", "low"
+        elif score < 50:
+            return "Medium", "medium"
         else:
-            for file in self.list_of_files:
-                self.LangAnalysis_listbox.insert(tk.END, file)
-
-
-    def hide_LangAnalysis(self):
-        self.LangAnalysis_label.pack_forget()
-        self.LangAnalysis_listbox.pack_forget()
+            return "High", "high"
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = EmailPieApp(root)
-    root.mainloop()
-
-
+    app = EmailScannerGUI()
+    app.mainloop()
