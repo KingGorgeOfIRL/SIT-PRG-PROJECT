@@ -1,1 +1,1 @@
-from main import email_language_risk, init_keyword_matrix
+from .main import email_language_risk, init_keyword_matrix
