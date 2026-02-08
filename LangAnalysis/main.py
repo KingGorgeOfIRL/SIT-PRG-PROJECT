@@ -2,7 +2,7 @@ import os
 from typing import Dict, List, Optional,Tuple, Any
 from functools import lru_cache
 import re
-from email_extract import Email,init_file
+from LangAnalysis.email_extract import Email,init_file
 
 def safe_detect_prob(
     line_tokens: List[str],
