@@ -2,8 +2,8 @@ import os
 from typing import Dict, List, Optional,Tuple, Any
 from functools import lru_cache
 import re
-from LangAnalysis.email_extract import Email,init_file
 
+#error-catching/validation function wrappers
 def safe_detect_prob(
     line_tokens: List[str],
     keywords: Dict[str, float],
@@ -98,7 +98,7 @@ def safe_tokenise(raw_text: str) -> List[List[str]]:
                 raise TypeError("tokenise() must return List[List[str]] containing only strings")
 
     return tokens
-
+#end of function wrappers
 
 def _printable(string:str) -> bool:
     return string.isprintable()
@@ -316,10 +316,15 @@ def email_language_risk(
     return risk_scores
 
 if __name__ == "__main__":
-    email = Email("Resources/DATASET/sitletter.eml")
-    matrix = init_keyword_matrix()
-    result = email_language_risk(email=email,
-                                 matrix=matrix,
-                                 total_weightage=40,
-                                 base_confidence_score=100)
-    print(result)
+    from email_extract import *
+    from testcases import *
+    # em = Email("Resources/DATASET/sitletter.eml")
+    # matrix = init_keyword_matrix()
+    # result = email_language_risk(email=em,
+    #                              matrix=matrix,
+    #                              total_weightage=40,
+    #                              base_confidence_score=100)
+    # print(result)
+    unittest.main(verbosity=2)
+else:
+    from .email_extract import *
