@@ -109,7 +109,7 @@ class Email:
     def __init__(
         self,
         email_path: str,
-        attachment_output_path: str = "LanguageAnalysis/Resources/TEMP_FILES",
+        attachment_output_path: str = "Resources/TEMP_FILES",
     ):
         self.email_path: str = email_path
         self.attachment_output_path: str = attachment_output_path
