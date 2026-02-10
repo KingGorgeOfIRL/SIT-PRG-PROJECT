@@ -11,6 +11,7 @@ from URLChecking.UrlCheck import risk_score_calculate as url_calc
 from EmailVerify.main import EmailVerifier, Email
 
 from LangAnalysis.main import *
+from LangAnalysis.email_extract import Email as ExtractEmail
 
 # animation loading spinner
 import threading
@@ -19,13 +20,22 @@ import sys
 import time
 
 
-#Blocks internet
+
+
+# Blocks internet
 import socket
+
+_original_socket = socket.socket
 
 def block_internet(*args, **kwargs):
     raise RuntimeError("Internet access is disabled")
 
-socket.socket = block_internet
+def enable_offline_mode():
+    socket.socket = block_internet
+
+def disable_offline_mode():
+    socket.socket = _original_socket
+
 
 
 # Spinner animation
@@ -39,27 +49,53 @@ def spinner(stop_event, label="Scanning"):
     sys.stdout.write("\r")
 
 
+def ensure_eml(file_path: str) -> str:
+    """
+    If file is already .eml, return as-is.
+    Otherwise convert to .eml and return new path.
+    """
+    if file_path.lower().endswith(".eml"):
+        return file_path
+
+    print(f"Converting to .eml: {os.path.basename(file_path)}")
+    return ExtractEmail.convert_to_eml(file_path)
+
+# This function just double checks if the file that is not .eml (email blobs) have already
+# been converted to .eml before, preventing duplicates
+def ensure_eml(file_path: str) -> str:
+    if file_path.lower().endswith(".eml"):
+        return file_path
+
+    eml_path = os.path.splitext(file_path)[0] + ".eml"
+    if os.path.exists(eml_path):
+        return eml_path
+
+    return ExtractEmail.convert_to_eml(file_path)
+
+
+# Goes through a folder and scans each file one by one
 def batch_scan_eml_folder(folder_path: str):
 
-    # Scans all .eml files in a folder and print risk results for each one.
 
     if not os.path.isdir(folder_path):
         print(f"Invalid folder path: {folder_path}")
         return
 
-    eml_files = [
+    # Scans all files, regardless of extension
+    all_files = [
         f for f in os.listdir(folder_path)
-        if f.lower().endswith(".eml")
+        if os.path.isfile(os.path.join(folder_path, f))
     ]
 
-    if not eml_files:
-        print("No .eml files found in folder.")
+    if not all_files:
+        print("No appropriate email format files found in folder.")
         return
 
-    print(f"Found {len(eml_files)} email(s) to scan.\n")
+    print(f"Found {len(all_files)} email(s) to scan.\n")
 
-    for filename in eml_files:
-        eml_path = os.path.join(folder_path, filename)
+    for filename in all_files:
+        original_path = os.path.join(folder_path, filename)
+        eml_path = ensure_eml(original_path)
 
         print("=" * 70)
         print(f"Scanning: {filename}")
@@ -133,7 +169,6 @@ def batch_scan_eml_folder(folder_path: str):
 
 
 
-
 def get_docChecking_scores(email: Email):
     
     # Grabs the files and places them in a list called "list_of_files"
@@ -177,11 +212,14 @@ def get_emailVerify_scores(email: Email):
 
 ################################################################################################################
 
+def is_offline():
+    return socket.socket == block_internet
+
 
 def scoringSystem(email: Email):
 
     #------------------------------------- Doc Checking & URL Check section ----------------------------#
-
+    
 
 
     # ----- Attachments -----
@@ -218,25 +256,34 @@ def scoringSystem(email: Email):
     urlPercentage_result = 0.0
     url_Flag = False
 
-    call_urlCheck = get_urlCheck_scores(email)
 
-    # If else statement is used to double check that no. of urls is not 0, causing an error 
-    if isinstance(call_urlCheck, (list, tuple)) and len(call_urlCheck) > 0:
-        urlCheck_result = call_urlCheck[0]
+    # If running offline scan, URL checks are disabled
+    if is_offline():
 
-    elif isinstance(call_urlCheck, dict):
-        urlCheck_result = call_urlCheck
+        urlPercentage_result = 0.0
+        url_Flag = False
 
     else:
-        urlCheck_result = {}
 
-    if urlCheck_result:
-        scores = [float(v) for v in urlCheck_result.values()]
-        num_of_urls = len(scores)
+        call_urlCheck = get_urlCheck_scores(email)
 
-        if num_of_urls > 0:
-            urlPercentage_result = sum(scores) / (num_of_urls * 100) * 100
-            url_Flag = True
+        # If else statement is used to double check that no. of urls is not 0, causing an error 
+        if isinstance(call_urlCheck, (list, tuple)) and len(call_urlCheck) > 0:
+            urlCheck_result = call_urlCheck[0]
+
+        elif isinstance(call_urlCheck, dict):
+            urlCheck_result = call_urlCheck
+
+        else:
+            urlCheck_result = {}
+
+        if urlCheck_result:
+            scores = [float(v) for v in urlCheck_result.values()]
+            num_of_urls = len(scores)
+
+            if num_of_urls > 0:
+                urlPercentage_result = sum(scores) / (num_of_urls * 100) * 100
+                url_Flag = True
 
 
 

@@ -1,157 +1,137 @@
 import unittest
 from unittest.mock import patch, MagicMock
+from datetime import datetime, timezone, timedelta
 from URLChecking.UrlCheck import UrlCheck, risk_score_calculate
+from LangAnalysis import Email
 
-# ---------- Base Test Class ----------
-class BaseUrlTest(unittest.TestCase):
-    def make_checker(self, urls=None, connectivity=False):
-        """Create UrlCheck object without calling __init__"""
-        urls = urls or []
-        u = UrlCheck.__new__(UrlCheck)
-        u.urls = urls
-        u.triggered_checks = {url: [] for url in urls}
-        u.connectivity = connectivity
-        u.url_split = {
-            url: {
-                "scheme": url.split("://")[0] if "://" in url else None,
-                "domain": url.split("/")[2] if "://" in url else url,
-                "port": None,
-                "path": None
-            } for url in urls
+
+class TestUrlDissection(unittest.TestCase):
+    def setUp(self):
+        self.urls = [
+            "http://example.com/path",
+            "https://example.com:8080/a/b",
+            "example.com",
+            "http://192.168.1.1/login"
+        ]
+
+        with patch.object(Email, "__init__", lambda x, y=None: None):
+            self.u = UrlCheck(email_path=None)
+            self.u.urls = self.urls
+            self.u.url_score = {url: 0 for url in self.u.urls}
+            self.u.triggered_checks = {url: [] for url in self.u.urls}
+            self.u.url_split = self.u._UrlCheck__url_dissection()
+
+    def test_scheme_domain_port_path(self):
+        d = self.u.url_split["https://example.com:8080/a/b"]
+        self.assertEqual(d["scheme"], "https")
+        self.assertEqual(d["domain"], "example.com")
+        self.assertEqual(d["port"], "8080")
+        self.assertEqual(d["path"], "a/b")
+
+    def test_ip_domain_detected(self):
+        d = self.u.url_split["http://192.168.1.1/login"]
+        self.assertEqual(d["domain"], "192.168.1.1")
+
+
+class TestUrlChecksOffline(unittest.TestCase):
+    def setUp(self):
+        with patch.object(Email, "__init__", lambda x, y=None: None):
+            self.u = UrlCheck(email_path=None)
+            self.u.urls = [
+                "http://192.168.0.1",
+                "http://bit.ly/test",
+                "http://example.com:1234/path?redir=http://evil.com",
+            ]
+            # Initialize after setting URLs
+            self.u.url_score = {url: 0 for url in self.u.urls}
+            self.u.triggered_checks = {url: [] for url in self.u.urls}
+            self.u.url_split = self.u._UrlCheck__url_dissection()
+            self.u.connectivity = False
+
+    @patch.object(UrlCheck, "extract_wordlist", return_value=["80", "443"])
+    def test_port_check(self, _):
+        self.u.port_check()
+        self.assertGreater(
+            self.u.url_score["http://example.com:1234/path?redir=http://evil.com"], 0
+        )
+
+    def test_ip_check(self):
+        self.u.ip_check()
+        self.assertEqual(self.u.url_score["http://192.168.0.1"], 20)
+
+    @patch.object(UrlCheck, "extract_wordlist", return_value=["bit.ly"])
+    def test_url_shortener(self, _):
+        self.u.urlShortener_check()
+        self.assertEqual(self.u.url_score["http://bit.ly/test"], 10)
+
+    @patch.object(UrlCheck, "extract_wordlist", return_value=["redir"])
+    def test_offline_redirection(self, _):
+        self.u.offline_redirection_check()
+        self.assertEqual(
+            self.u.url_score["http://example.com:1234/path?redir=http://evil.com"], 10
+        )
+
+class TestDomainAgeCheck(unittest.TestCase):
+    def setUp(self):
+        with patch("LangAnalysis.Email.__init__", lambda self, y=None: None):
+            self.u = UrlCheck(email_path=None)
+            self.u.urls = ["http://example.com"]
+            self.u.url_score = {url: 0 for url in self.u.urls}
+            self.u.triggered_checks = {url: [] for url in self.u.urls}
+            self.u.url_split = self.u._UrlCheck__url_dissection()
+            self.u.connectivity = True
+
+    @patch("URLChecking.UrlCheck.get")
+    def test_domain_age_check_young_domain(self, mock_get):
+        # Mock RDAP API response with a recent registration date
+        recent_date = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "events": [
+                {"eventAction": "registration", "eventDate": recent_date}
+            ]
         }
 
-        # Stub all check methods to avoid real network calls
-        for method in [
-            "ssl_check", "ip_check", "port_check", "urlShortener_check", "length_check",
-            "subdomain_check", "specialChar_check", "at_symbol_check", "punycode_check",
-            "offline_redirection_check", "online_redirection_check", "domain_page_rank_check",
-            "domain_age_check", "virus_total"
-        ]:
-            setattr(u, method, getattr(u, method, lambda: None))
-        return u
-
-# ---------- Structural Checks ----------
-class TestStructuralChecks(BaseUrlTest):
-    def test_ssl_check(self):
-        u = self.make_checker(["http://a.com", "https://b.com"])
-        # Simulate trigger manually
-        u.triggered_checks["http://a.com"].append("ssl_check")
-        ranked, final_checks = risk_score_calculate(u.connectivity, u.triggered_checks)
-        self.assertEqual(dict(ranked)["http://a.com"], 5)
-        self.assertEqual(dict(ranked)["https://b.com"], 0)
-
-    def test_length_check_edge_cases(self):
-        short = "http://a.co"
-        long = "http://example.com/" + "a"*300
-        u = self.make_checker([short, long])
-        # Manually trigger
-        u.triggered_checks[short].append("length_check")
-        u.triggered_checks[long].append("length_check")
-        ranked, _ = risk_score_calculate(u.connectivity, u.triggered_checks)
-        scores = dict(ranked)
-        self.assertGreater(scores[short], 0)
-        self.assertGreater(scores[long], 0)
-
-    def test_subdomain_check(self):
-        u = self.make_checker(["http://a.b.c.d.e.com"])
-        u.triggered_checks["http://a.b.c.d.e.com"].append("subdomain_check")
-        ranked, _ = risk_score_calculate(u.connectivity, u.triggered_checks)
-        self.assertEqual(dict(ranked)["http://a.b.c.d.e.com"], 5)
-
-# ---------- Suspicious Characters ----------
-class TestSuspiciousCharacters(BaseUrlTest):
-    def test_special_char_check(self):
-        u = self.make_checker(["http://exa$mple.com"])
-        u.triggered_checks["http://exa$mple.com"].append("specialChar_check")
-        ranked, _ = risk_score_calculate(u.connectivity, u.triggered_checks)
-        self.assertEqual(dict(ranked)["http://exa$mple.com"], 10)
-
-    def test_at_symbol_check(self):
-        u = self.make_checker(["http://user@evil.com"])
-        u.triggered_checks["http://user@evil.com"].append("at_symbol_check")
-        ranked, _ = risk_score_calculate(u.connectivity, u.triggered_checks)
-        self.assertEqual(dict(ranked)["http://user@evil.com"], 10)
-
-    def test_punycode_check(self):
-        u = self.make_checker(["http://xn--evil.com"])
-        u.triggered_checks["http://xn--evil.com"].append("punycode_check")
-        ranked, _ = risk_score_calculate(u.connectivity, u.triggered_checks)
-        self.assertEqual(dict(ranked)["http://xn--evil.com"], 70)
-
-# ---------- Duplicate Trigger Protection ----------
-class TestDuplicateProtection(BaseUrlTest):
-    def test_no_double_counting(self):
-        u = self.make_checker(["http://192.168.0.1"])
-        u.triggered_checks["http://192.168.0.1"].append("ip_check")
-        u.triggered_checks["http://192.168.0.1"].append("ip_check")
-        ranked, _ = risk_score_calculate(u.connectivity, u.triggered_checks)
-        self.assertEqual(dict(ranked)["http://192.168.0.1"], 12)  # first high=10 + duplicate 2%
-        self.assertEqual(u.triggered_checks["http://192.168.0.1"].count("ip_check"), 2)
+        self.u.domain_age_check()
+        self.assertEqual(self.u.url_score["http://example.com"], 20)
 
 
-# ---------- Connectivity Behavior ----------
-class TestConnectivityBehavior(BaseUrlTest):
-    def test_offline_redirection_only(self):
-        u = self.make_checker(["http://example.com/?redir=http://evil.com"], connectivity=False)
-        u.triggered_checks["http://example.com/?redir=http://evil.com"].append("offline_redirection_check")
-        ranked, _ = risk_score_calculate(u.connectivity, u.triggered_checks)
-        score = dict(ranked)["http://example.com/?redir=http://evil.com"]
-        self.assertGreater(score, 0)
-        self.assertLessEqual(score, 100)
+class TestVirusTotal(unittest.TestCase):
+    def setUp(self):
+        with patch.object(Email, "__init__", lambda x, y=None: None):
+            self.u = UrlCheck(email_path=None)
+            self.u.urls = ["http://malicious.com"]
+            self.u.url_score = {url: 0 for url in self.u.urls}
+            self.u.triggered_checks = {url: [] for url in self.u.urls}
+            self.u.url_split = self.u._UrlCheck__url_dissection()
+            self.u.connectivity = True
 
-    def test_online_redirection_check(self):
-        u = self.make_checker(["http://example.com"], connectivity=True)
-        u.triggered_checks["http://example.com"].append("online_redirection_check")
-        ranked, _ = risk_score_calculate(u.connectivity, u.triggered_checks)
-        self.assertEqual(dict(ranked)["http://example.com"], 10)
+    @patch("URLChecking.UrlCheck.post")  # patch post directly
+    @patch("URLChecking.UrlCheck.get")   # patch get directly
+    def test_virus_total_malicious(self, mock_get, mock_post):
+        mock_post.return_value.json.return_value = {"data": {"id": "abc"}}
 
-# ---------- Domain Age / Page Rank ----------
-class TestDomainChecks(BaseUrlTest):
-    def test_domain_age_exception_safe(self):
-        u = self.make_checker(["http://example.com"], connectivity=True)
-        u.triggered_checks["http://example.com"] = []
-        ranked, _ = risk_score_calculate(u.connectivity, u.triggered_checks)
-        self.assertEqual(dict(ranked)["http://example.com"], 0)
-
-    def test_page_rank_low_scores_high(self):
-        u = self.make_checker(["http://lowrank.com"], connectivity=True)
-        u.triggered_checks["http://lowrank.com"].append("domain_page_rank_check")
-        ranked, _ = risk_score_calculate(u.connectivity, u.triggered_checks)
-        self.assertEqual(dict(ranked)["http://lowrank.com"], 70)
-
-# ---------- VirusTotal Handling ----------
-class TestVirusTotalFailures(BaseUrlTest):
-    def test_virus_total_exception_safe(self):
-        u = self.make_checker(["http://evil.com"], connectivity=True)
-        u.triggered_checks["http://evil.com"] = []
-        ranked, _ = risk_score_calculate(u.connectivity, u.triggered_checks)
-        self.assertEqual(dict(ranked)["http://evil.com"], 0)
-
-# ---------- Risk Score Calculation ----------
-class TestRiskScoreCalculationExtended(unittest.TestCase):
-    def test_multi_url_ranking(self):
-        triggered_checks = {
-            "a": ["ip_check", "ssl_check"],           # high + other
-            "b": ["domain_age_check", "punycode_check"] # critical + critical
+        mock_get.return_value.json.return_value = {
+            "data": {"attributes": {"stats": {"malicious": 5, "harmless": 0}}}
         }
-        ranked, _ = risk_score_calculate(True, triggered_checks)
-        scores = dict(ranked)
-        self.assertEqual(scores["b"], 75)  # 70 + 5
-        self.assertEqual(scores["a"], 15)  # 10 + 5
-        self.assertEqual(ranked[0][0], "b") # highest first
 
-# ---------- Edge Cases ----------
-class TestEdgeCases(BaseUrlTest):
-    def test_empty_url_list(self):
-        u = self.make_checker([], connectivity=True)
-        ranked, _ = risk_score_calculate(u.connectivity, u.triggered_checks)
-        self.assertEqual(ranked, [])
+        self.u.virus_total()
+        self.assertEqual(self.u.url_score["http://malicious.com"], 50)
 
-    def test_malformed_url(self):
-        u = self.make_checker(["not_a_url"])
-        u.triggered_checks["not_a_url"].append("ssl_check")
-        ranked, _ = risk_score_calculate(u.connectivity, u.triggered_checks)
-        self.assertEqual(dict(ranked)["not_a_url"], 5)
+
+class TestRiskScoreCalculation(unittest.TestCase):
+    def test_risk_score_online(self):
+        scores = {"a": 140}
+        max_score = 280  # example max
+        final, triggered, ranked = risk_score_calculate(max_score, scores, True, {"a":[]})
+        self.assertEqual(final["a"], 50.0)
+
+    def test_risk_score_offline(self):
+        scores = {"a": 120}
+        max_score = 240  # example max
+        final, triggered, ranked = risk_score_calculate(max_score, scores, False, {"a":[]})
+        self.assertEqual(final["a"], 50.0)
+
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main()

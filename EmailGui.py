@@ -7,6 +7,8 @@ import threading
 from EmailScore import *
 from EmailVerify.main import Email
 
+from LangAnalysis.email_extract import *
+
 
 class EmailScannerGUI(tk.Tk):
     def __init__(self):
@@ -23,6 +25,12 @@ class EmailScannerGUI(tk.Tk):
         self.cancel_event = threading.Event()
         self.total_emails = 0
         self.processed_emails = 0
+
+        # Variable for offline checkbox 
+        self.offline_mode = tk.BooleanVar(value=False)
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+
 
         self.create_widgets()
 
@@ -55,6 +63,14 @@ class EmailScannerGUI(tk.Tk):
             text="Scan Emails",
             command=self.start_scan
         ).pack(side="right")
+
+        tk.Checkbutton(
+            top_frame,
+            text="Offline mode (no internet)",
+            variable=self.offline_mode,
+            command=self.toggle_offline_mode
+        ).pack(side="right", padx=10)
+
 
         # Table
         columns = ("file", "sender", "subject", "risk", "level")
@@ -127,12 +143,30 @@ class EmailScannerGUI(tk.Tk):
 
     #---------------------------------------- Scanning folder --------------------------------------------#
 
+    def ensure_eml(self, file_path):
+        """
+        If the file is not .eml, convert it to .eml using EmailExtract and mark it for deletion later.
+        Returns the path to the .eml file.
+        """
+        if file_path.lower().endswith(".eml"):
+            return file_path
+        else:
+            eml_file = Email.convert_to_eml(file_path)
+            if not hasattr(self, "temp_eml_files"):
+                self.temp_eml_files = []
+            self.temp_eml_files.append(eml_file)
+            return eml_file
+
+
     def select_folder(self):
         path = filedialog.askdirectory()
         if path:
             self.folder_path.set(path)
 
     def start_scan(self):
+        # enforces offline setting 
+        self.apply_offline_setting()
+        
         if not self.folder_path.get():
             messagebox.showerror("Error", "Please select a folder first")
             return
@@ -141,31 +175,58 @@ class EmailScannerGUI(tk.Tk):
             self.tree.delete(item)
 
         folder = self.folder_path.get()
-        eml_files = [f for f in os.listdir(folder) if f.lower().endswith(".eml")]
+        all_files = [os.path.join(folder, f) for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
 
-        if not eml_files:
+        if not all_files:
             messagebox.showinfo("Info", "No .eml files found")
             return
 
-        self.show_loading(len(eml_files))
+        self.show_loading(len(all_files))
 
         threading.Thread(
             target=self.scan_folder_worker,
-            args=(eml_files,),
+            args=(all_files,),
             daemon=True
         ).start()
+
+
+    def toggle_offline_mode(self):
+        if self.offline_mode.get():
+            enable_offline_mode()
+            messagebox.showinfo(
+                "Offline Mode Enabled",
+                "Internet access has been disabled.\n"
+                "URL reputation and online checks will not work."
+            )
+        else:
+            disable_offline_mode()
+            messagebox.showinfo(
+                "Offline Mode Disabled",
+                "Internet access has been restored."
+            )
+
+    def on_close(self):
+        disable_offline_mode()
+        self.destroy()
+
+
+    def apply_offline_setting(self):
+        if self.offline_mode.get():
+            enable_offline_mode()
+        else:
+            disable_offline_mode()
 
 
 
     def scan_folder(self):
         folder = self.folder_path.get()
-        eml_files = [f for f in os.listdir(folder) if f.lower().endswith(".eml")]
+        all_files = [f for f in os.listdir(folder) if f.lower().endswith(".eml")]
 
-        if not eml_files:
+        if not all_files:
             messagebox.showinfo("Info", "No .eml files found")
             return
 
-        for filename in eml_files:
+        for filename in all_files:
             try:
                 path = os.path.join(folder, filename)
                 email = Email(path)
@@ -245,16 +306,19 @@ class EmailScannerGUI(tk.Tk):
                 print(f"Error scanning {filename}: {e}")
 
 
-    def scan_folder_worker(self, eml_files):
+    def scan_folder_worker(self, all_files):
         folder = self.folder_path.get()
 
-        for filename in eml_files:
+        for filename in all_files:
             if self.cancel_event.is_set():
                 break
 
+            # Ensures that the files are all .eml
+            file_path = os.path.join(folder, filename)
+            eml_file_path = self.ensure_eml(file_path)
+
             try:
-                path = os.path.join(folder, filename)
-                email = Email(path)
+                email = Email(eml_file_path)
 
                 (
                     doc_score,
@@ -302,6 +366,16 @@ class EmailScannerGUI(tk.Tk):
         self.after(0, self.hide_loading)
 
 
+        # Clean up temp .eml files
+        if hasattr(self, "temp_eml_files"):
+            for temp_file in self.temp_eml_files:
+                try:
+                    os.remove(temp_file)
+                except Exception as e:
+                    print(f"Failed to delete temp file {temp_file}: {e}")
+            self.temp_eml_files.clear()
+
+
     def scan_folder_wrapper(self):
         try:
             self.scan_folder()
@@ -313,6 +387,9 @@ class EmailScannerGUI(tk.Tk):
 
 
     def scan_single_email(self):
+
+        self.apply_offline_setting()
+
         file_path = filedialog.askopenfilename(
             title="Select a .eml file",
             filetypes=[("Email Files", "*.eml")]
@@ -340,8 +417,17 @@ class EmailScannerGUI(tk.Tk):
             self.after(0, self.hide_loading)
             return
 
+        
+        # Track temporary .eml files
+        temp_files = []
+
         try:
-            email = Email(file_path)
+
+            eml_file = self.ensure_eml(file_path)
+            if eml_file != file_path:
+                temp_files.append(eml_file)
+
+            email = Email(eml_file)
 
             (
                 doc_score,
@@ -386,6 +472,13 @@ class EmailScannerGUI(tk.Tk):
         self.processed_emails += 1
         self.after(0, self.update_progress)
         self.after(0, self.hide_loading)
+
+        # Delete any temporary .eml files created
+        for temp_file in temp_files:
+            try:
+                os.remove(temp_file)
+            except Exception as e:
+                print(f"Failed to delete temp file {temp_file}: {e}")
 
 
 
@@ -487,6 +580,7 @@ class EmailScannerGUI(tk.Tk):
 
 
     def hide_loading(self):
+        disable_offline_mode()
         self.loading_frame.place_forget()
 
 
@@ -522,15 +616,47 @@ class EmailScannerGUI(tk.Tk):
             "subject": email.subject,
             "body": email.text or "(No email body)",
             "risk": f"{score:.2f}%",
-            "level": level
+            "level": level,
+            "urls": email.urls,
+            "attachments": email.attachment_header
         }
 
+            # Write log file
+        self.write_log_file(
+            filename,
+            f"{score:.2f}%",
+            level,
+            email.urls,
+            email.attachment_header
+        )
+
+            # --- Write log file for this email ---
+        self.write_log_file(filename, f"{score:.2f}%", level, email.urls, email.attachment_header)
+
+
+
+    def write_log_file(self, filename, risk, level, urls=None, attachments=None):
+        log_folder = "Finished Email Scans"
+        # Creates the logs folder if missing
+        os.makedirs(log_folder, exist_ok=True)
+
+        base_name = os.path.splitext(os.path.basename(filename))[0]
+        log_file_path = os.path.join(log_folder, f"{base_name}.txt")
+
+        with open(log_file_path, "w", encoding="utf-8") as f:
+            f.write(f"File: {filename}\n")
+            f.write(f"Risk: {risk}\n")
+            f.write(f"Level: {level}\n")
+            if urls:
+                f.write(f"URLs: {', '.join(urls)}\n")
+            if attachments:
+                f.write(f"Attachments: {', '.join(a['filename'] for a in attachments)}\n")
 
 
 
     @staticmethod
     def risk_level(score):
-        if score < 15:
+        if score < 10:
             return "Low", "low"
         elif score < 50:
             return "Medium", "medium"
