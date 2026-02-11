@@ -2,7 +2,9 @@ import unittest
 from unittest.mock import patch
 import os
 import tempfile
-
+if __name__ == "__main__":
+    import main as m
+    import email_extract as email
 
 class TestDetectProb(unittest.TestCase):
     def test_empty_tokens(self):
@@ -173,6 +175,67 @@ class TestEmailLanguageRisk(unittest.TestCase):
             scores = m.email_language_risk(title="pay", body="", matrix=matrix, total_weightage=40)
             # Should still be >0 because penalty treated as 0
             self.assertGreater(scores["flag"], 0.0)
+    @patch.object(m, "get_lemmatizer_wordlist", return_value={})
+    def test_email_fields_none_override_title_body(self, _mock_lemma):
+        class DummyEmail:
+            subject = None
+            text = None
+
+        matrix = {"flag": {"pay": 100.0}}
+
+        # Email is provided, so title/body must be ignored.
+        # Since subject/text are None -> treated as empty => no match.
+        scores = m.email_language_risk(
+            email=DummyEmail(),
+            title="pay",
+            body="pay",
+            matrix=matrix,
+            total_weightage=40
+        )
+        self.assertEqual(scores["flag"], 0.0)
+
+    @patch.object(m, "get_lemmatizer_wordlist", return_value={})
+    def test_length_modifier_boundary_equal_thresholds_does_not_apply(self, _mock_lemma):
+        matrix = {"flag": {"pay": 100.0}}
+
+        # Stabilise confidence so we can assert exact numbers.
+        with patch.object(m, "calc_confidence", return_value=0.0):
+            raw_text = "pay\n"
+            char_len = len(raw_text)
+            num_lines = 1  # tokenise("pay\n") should yield one non-empty line
+
+            # Equal thresholds => (char_len < suspect_length) is False and (num_lines < suspect_line_num) is False
+            with patch.object(m, "safe_get_multipliers", return_value=({0: 1.0}, char_len, num_lines, [0])):
+                scores_no_mod = m.email_language_risk(
+                    title="pay",
+                    body="",
+                    matrix=matrix,
+                    total_weightage=40
+                )
+
+            self.assertAlmostEqual(scores_no_mod["flag"], 40.0, places=2)
+
+    @patch.object(m, "get_lemmatizer_wordlist", return_value={})
+    def test_length_modifier_boundary_shorter_than_threshold_applies(self, _mock_lemma):
+        matrix = {"flag": {"pay": 100.0}}
+
+        # Stabilise confidence so we can assert exact numbers.
+        with patch.object(m, "calc_confidence", return_value=0.0):
+            raw_text = "pay\n"
+            char_len = len(raw_text)
+            num_lines = 1
+
+            # suspect_length one higher => char_len < suspect_length is True => apply 20% modifier => 48.0
+            with patch.object(m, "safe_get_multipliers", return_value=({0: 1.0}, char_len + 1, num_lines, [0])):
+                scores_with_mod = m.email_language_risk(
+                    title="pay",
+                    body="",
+                    matrix=matrix,
+                    total_weightage=40
+                )
+
+            self.assertAlmostEqual(scores_with_mod["flag"], 48.0, places=2)
+
 
 class TestSafeFilename(unittest.TestCase):
     def test_none_or_empty_returns_default(self):
@@ -329,7 +392,6 @@ class TestConvertToEml(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             email.Email.convert_to_eml("does_not_exist.raw")
 
+
 if __name__ == "__main__":
-    import main as m
-    import email_extract as email
     unittest.main(verbosity=2)

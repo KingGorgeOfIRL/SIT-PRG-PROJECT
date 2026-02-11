@@ -174,7 +174,8 @@ def validate_matrix(matrix: Any) -> Dict[str, Dict[str, float]]:
 
 def calc_confidence(
     observed: Dict[str, int],
-    model: Dict[str, float]
+    model: Dict[str, float],
+    noise_threshold: int = 3
     ) -> float:
     """
     Computes confidence penalty using L1 distance between
@@ -189,7 +190,7 @@ def calc_confidence(
     
     penalty = 0.0
     for key, count in observed.items():
-        if count <= 3 and " " not in key:
+        if count <= noise_threshold and " " not in key:
             continue
         observed_pct = (count / total) * 100
         expected_pct = model.get(key, 0)
@@ -197,9 +198,9 @@ def calc_confidence(
     return penalty
 
 #error-catch/validation function wrapper
-def safe_confidence_penalty(frequency: Dict[str, int], keywords: Dict[str, float]) -> float:
+def safe_confidence_penalty(frequency: Dict[str, int], keywords: Dict[str, float],noise_threshold:int = 3) -> float:
     try:
-        penalty = calc_confidence(frequency, keywords)
+        penalty = calc_confidence(frequency, keywords,noise_threshold)
     except Exception:
         return 0.0
     return float(penalty) if isinstance(penalty, (int, float)) else 0.0
@@ -281,7 +282,8 @@ def email_language_risk(
     base_confidence_score: int = 100,
     title_weight:int = 30,
     suspect_length: int = 300,
-    length_modifier:int = 20
+    length_modifier:int = 20,
+    noise_threshold:int = 2
 ) -> Dict[str, float]:
     #Calculate per-flag language risk scores for an email.
 
@@ -314,7 +316,7 @@ def email_language_risk(
             flag_prob += prob * line_weight(idx, weight_multiplier, rev_weight_keys)
         flag_prob = max(0.0, min(flag_prob, 100.0))
 
-        confidence_penalty = safe_confidence_penalty(frequency, keywords)
+        confidence_penalty = safe_confidence_penalty(frequency, keywords,noise_threshold)
         confidence_score = max(0.0, float(base_confidence_score) - confidence_penalty)
         confidence_score = min(confidence_score, 100.0)
 
