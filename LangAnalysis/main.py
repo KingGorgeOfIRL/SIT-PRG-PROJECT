@@ -49,6 +49,7 @@ def get_multipliers(title_weight:int = 40,suspect_length:int=300) -> tuple[Dict[
     return line_multiplier, suspect_length, num_lines
 
 #error-catch/validation function wrapper
+#checks for return values
 def safe_get_multipliers(title_weight:int = 40,suspect_length:int=300) -> Tuple[Dict[int, float], int, int, List[int]]:
     try:
         weight_multiplier, suspect_length, suspect_line_num = get_multipliers(title_weight,suspect_length)
@@ -94,6 +95,7 @@ def tokenise(text: str) -> List[List[str]]:
                 lemma = cleaned
             word_line.append(lemma)
         
+        #ensures there is no empty list elements
         if word_line:
             tokenised.append(word_line)
     return tokenised
@@ -275,7 +277,11 @@ def email_language_risk(
     body: Optional[str] = None,
     title: Optional[str] = None,
     matrix: Optional[Dict[str, Dict[str, float]]] = None,
-    total_weightage: int = 40,base_confidence_score: int = 100
+    total_weightage: int = 40,
+    base_confidence_score: int = 100,
+    title_weight:int = 40,
+    suspect_length: int = 300,
+    length_modifier:float = 1.2
 ) -> Dict[str, float]:
     #Calculate per-flag language risk scores for an email.
 
@@ -289,7 +295,7 @@ def email_language_risk(
     _, _, raw_text = safe_get_text(email, body, title)
     tokens = safe_tokenise(raw_text)
 
-    weight_multiplier, suspect_length, suspect_line_num, rev_weight_keys = safe_get_multipliers()
+    weight_multiplier, suspect_length, suspect_line_num, rev_weight_keys = safe_get_multipliers(title_weight, suspect_length)
 
     flag_weight = float(total_weightage) / float(len(matrix))
     risk_scores: Dict[str, float] = {}
@@ -312,7 +318,7 @@ def email_language_risk(
         confidence_score = max(0.0, float(base_confidence_score) - confidence_penalty)
         confidence_score = min(confidence_score, 100.0)
 
-        length_modifier = 1.2 if (char_len < suspect_length or num_lines < suspect_line_num) else 1.0
+        length_modifier = length_modifier if (char_len < suspect_length or num_lines < suspect_line_num) else 1.0
 
         risk_scores[flag] = round(
             flag_weight
