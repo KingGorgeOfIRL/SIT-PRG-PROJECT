@@ -3,6 +3,7 @@ from unittest.mock import patch
 import os
 import tempfile
 
+
 class TestDetectProb(unittest.TestCase):
     def test_empty_tokens(self):
         prob, freq = m.detect_prob([], {"bank": 10.0}, None)
