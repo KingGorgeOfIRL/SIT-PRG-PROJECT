@@ -279,9 +279,9 @@ def email_language_risk(
     matrix: Optional[Dict[str, Dict[str, float]]] = None,
     total_weightage: int = 40,
     base_confidence_score: int = 100,
-    title_weight:int = 40,
+    title_weight:int = 30,
     suspect_length: int = 300,
-    length_modifier:float = 1.2
+    length_modifier:int = 20
 ) -> Dict[str, float]:
     #Calculate per-flag language risk scores for an email.
 
@@ -318,7 +318,7 @@ def email_language_risk(
         confidence_score = max(0.0, float(base_confidence_score) - confidence_penalty)
         confidence_score = min(confidence_score, 100.0)
 
-        length_modifier = length_modifier if (char_len < suspect_length or num_lines < suspect_line_num) else 1.0
+        length_modifier = 1 + length_modifier/100 if (char_len < suspect_length or num_lines < suspect_line_num) else 1.0
 
         risk_scores[flag] = round(
             flag_weight
