@@ -45,12 +45,10 @@ class DocCheck(Email):
         self.metadata_date:{str: {str: int}} = self.__date_extraction()
 
         # initialize risk score per file
-        self.file_score:{str: int} = {file_name: 0 for file_name in self.files}
+        self.file_score:{str: int} = {file_name: 0 for file_name in self.files} or None
 
         # track which checks triggered per file (for explainability)
         self.triggered_checks:{str: [str]} = {file_name: [] for file_name in self.files}
-        
-        self.file_score = 0
     # internet check
     def __internet_check(self):
         """
