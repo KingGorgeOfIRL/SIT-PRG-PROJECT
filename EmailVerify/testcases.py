@@ -36,7 +36,7 @@ class TestDomainWhitelistCheck(unittest.TestCase):
     def test_whitelisted_domain(self):
         self.v.domain_whitelist_check()
 
-        self.assertTrue(self.v.flags.get("whitelisted domain"))
+        self.assertTrue(self.v.flags.get("whitelisted_domain"))
         self.assertLess(self.v.risk_score, 0)
 
 
@@ -98,6 +98,80 @@ class TestSuspiciousDomainStructure(unittest.TestCase):
 
         self.assertTrue(self.v.flags.get("suspicious_domain_structure"))
 
+
+# ---------------- NUMERIC USERNAME ---------------- #
+
+class TestNumericUsername(unittest.TestCase):
+
+    def setUp(self):
+        self.fake_email = type("Email", (), {})()
+        self.fake_email.sender = "user123456789@spam.com"
+        self.fake_email.headers = {}
+
+        self.v = EmailVerifier(self.fake_email)
+        self.v.sender_email = "user123456789@spam.com"
+
+    def test_numeric_username_trigger(self):
+        self.v.numeric_username_check()
+
+        self.assertTrue(self.v.flags.get("numeric_username"))
+        self.assertGreater(self.v.risk_score, 0)
+
+
+# ---------------- RANDOM USERNAME ---------------- #
+
+class TestRandomUsername(unittest.TestCase):
+
+    def setUp(self):
+        self.fake_email = type("Email", (), {})()
+        self.fake_email.sender = "xj92ksla09238jdks123@spam.com"
+        self.fake_email.headers = {}
+
+        self.v = EmailVerifier(self.fake_email)
+        self.v.sender_email = "xj92ksla09238jdks123@spam.com"
+
+    def test_random_username_trigger(self):
+        self.v.random_username_check()
+
+        self.assertTrue(self.v.flags.get("random_username"))
+        self.assertGreater(self.v.risk_score, 0)
+
+
+# ---------------- ALL CAPS DISPLAY NAME ---------------- #
+
+class TestAllCapsDisplayName(unittest.TestCase):
+
+    def setUp(self):
+        self.fake_email = type("Email", (), {})()
+        self.fake_email.sender = "DR MARKUS PHILLIPS <dr@company.com>"
+        self.fake_email.headers = {}
+
+        self.v = EmailVerifier(self.fake_email)
+        self.v.display_name = "DR MARKUS PHILLIPS"
+
+    def test_all_caps_display_name_trigger(self):
+        self.v.all_caps_display_name_check()
+
+        self.assertTrue(self.v.flags.get("all_caps_display_name"))
+        self.assertGreater(self.v.risk_score, 0)
+
+
+# ---------------- MULTIPLE SENDERS ---------------- #
+
+class TestMultipleSenders(unittest.TestCase):
+
+    def setUp(self):
+        self.fake_email = type("Email", (), {})()
+        self.fake_email.sender = "a@test.com, b@test.com"
+        self.fake_email.headers = {}
+
+        self.v = EmailVerifier(self.fake_email)
+
+    def test_multiple_senders_trigger(self):
+        self.v.multiple_senders_check()
+
+        self.assertTrue(self.v.flags.get("multiple_senders"))
+        self.assertGreater(self.v.risk_score, 0)
 
 # ---------------- RISK PERCENTAGE ---------------- #
 

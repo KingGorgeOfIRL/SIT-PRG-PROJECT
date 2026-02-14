@@ -3,18 +3,21 @@ from typing import Set, Dict, Tuple, Any
 from zipfile import ZipFile
 from email.utils import parsedate_to_datetime, parseaddr
 from LangAnalysis import Email
- 
+import re
+
 class EmailVerifier:
     #centralised risk weights
-    #easier for me to compute max risk score.
     RISK_WEIGHTS = {
-        "unknown_sender": 1,
         "display_name_mismatch": 3,
         "suspicious_pattern": 2,
         "brand_impersonation": 4,
         "suspicious_domain_structure": 1,
-        "sender_username_suspicious": 2,
-        "local_part_suspicious": 2,
+        "sender_username_suspicious": 3,
+        "local_part_brand_impersonation": 2,
+        "numeric_username": 3,
+        "random_username": 2,
+        "all_caps_display_name": 2,
+        "multiple_senders": 3,
     }
 
     def __init__(self, email):
@@ -29,7 +32,6 @@ class EmailVerifier:
         self.known_suswords: Set[str] = self.load_wordlist("Resources/WORDLISTS/email_verify/suspisciouswords.txt")
         
         #extract sender info
-        
         self.display_name: str
         self.sender_email: str
         self.sender_domain: str
@@ -45,10 +47,10 @@ class EmailVerifier:
                 if line.strip() and not line.startswith("#")
             }
         
-    #separates sender display name and email address from From header
+    #separates sender display name and email address from "From" header
     def extract_sender_info(self) -> Tuple[str, str]:
         name, addr = parseaddr(self.email.sender)
-        return name.lower(), addr.lower()
+        return name.strip(), addr.lower()
     
     def extract_domain(self, email_addr: str) -> str:
         if "@" not in email_addr:
@@ -58,16 +60,6 @@ class EmailVerifier:
     #normalize domain to remove space and covert to lower case
     def normalize_domain(self, domain: str) -> str:
         return domain.lower().strip() if domain else ""
-    
-    #checks if the email is in the trusted.txt
-    def trusted_email_check(self) -> bool:
-        if self.sender_email in self.trusted_emails:
-            self.flags["trusted_email"] = True
-            return True
-        else:
-            self.flags["unknown_sender"] = True
-            self.risk_score += self.RISK_WEIGHTS["unknown_sender"]
-            return False
 
     #checks if sender domain is trusted
     def domain_whitelist_check(self) -> None:
@@ -81,8 +73,10 @@ class EmailVerifier:
                 break
         
     def display_name_mismatch_check(self) -> None:
+        display_lower = self.display_name.lower()
+
         for company in self.known_company:
-            if company in self.display_name and company not in self.sender_domain:
+            if company in display_lower and company not in self.sender_domain:
                 self.flags["display_name_mismatch"] = True
                 self.risk_score += self.RISK_WEIGHTS["display_name_mismatch"]
                 return
@@ -104,7 +98,7 @@ class EmailVerifier:
         for company in self.known_company:
             if company in local_part and company not in self.sender_domain:
                 self.flags["local_part_brand_impersonation"] = True
-                self.risk_score += self.RISK_WEIGHTS["local_part_suspicious"]
+                self.risk_score += self.RISK_WEIGHTS["local_part_brand_impersonation"]
                 return
             
     #checks if sender uses suspicious words in their domain
@@ -119,7 +113,6 @@ class EmailVerifier:
     def suspicious_domain_structure_check(self) -> None:
         if not self.sender_domain:
             return
-
         dot_count: int = self.sender_domain.count(".")
         
         #mail.company.com -> 2 dots (OK)
@@ -128,7 +121,7 @@ class EmailVerifier:
             self.flags["suspicious_domain_structure"] = True
             self.risk_score += self.RISK_WEIGHTS["suspicious_domain_structure"]
 
-    # computes distance between 2 strings. To measure similarity
+    #computes distance between 2 strings. To measure similarity
     def edit_distance(self, a: str, b: str) -> int:
         dp: list[list[int]] = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]
 
@@ -147,7 +140,7 @@ class EmailVerifier:
                 )
         return dp[-1][-1]
     
-    # compares the distance between sender and trusted domains.
+    #compares the distance between sender and trusted domains.
     def lookalike_domain_check(self) -> None:
         for trusted in self.trusted_domains:
             dist: int = self.edit_distance(self.sender_domain, trusted)
@@ -172,9 +165,38 @@ class EmailVerifier:
             self.flags.get("sender_username_suspicious")
             and not self.flags.get("whitelisted_domain")
         ):
-            self.flags["username_domain_mismatch"] = True
+            self.flags["username_domain_suspicious"] = True
             self.risk_score += 2
 
+    #checks if sender's username has alot of consecutive digits
+    def numeric_username_check(self) -> None:
+        local_part: str = self.sender_email.split("@")[0]
+
+        # 5 or more consecutive digits
+        if re.search(r"\d{5,}", local_part):
+            self.flags["numeric_username"] = True
+            self.risk_score += self.RISK_WEIGHTS["numeric_username"]
+
+    #checks if username seems random >18 characters, had alphabets and numbers
+    def random_username_check(self) -> None:
+        local_part: str = self.sender_email.split("@")[0]
+
+        if len(local_part) > 18 and re.search(r"[a-z]", local_part) and re.search(r"\d", local_part):
+            self.flags["random_username"] = True
+            self.risk_score += self.RISK_WEIGHTS["random_username"]
+
+    #checks if display name is all in caps
+    def all_caps_display_name_check(self) -> None:
+        if self.display_name and self.display_name.isupper() and len(self.display_name) > 5:
+            self.flags["all_caps_display_name"] = True
+            self.risk_score += self.RISK_WEIGHTS["all_caps_display_name"]
+
+    #checks if there is multiple senders in header
+    def multiple_senders_check(self) -> None:
+        if self.email.sender and "," in self.email.sender:
+            self.flags["multiple_senders"] = True
+            self.risk_score += self.RISK_WEIGHTS["multiple_senders"]
+    
     def get_risk_percentage(self) -> float:
         if self.risk_score <= 0:
             return 0.0
@@ -193,10 +215,6 @@ class EmailVerifier:
     def run_verification(self) -> Dict[str, Any]:
         self.sender_domain = self.normalize_domain(self.sender_domain)
 
-        # skip other checks if email is trusted
-        if self.trusted_email_check():
-            return self._final_result()
-
         self.domain_whitelist_check()
         self.display_name_mismatch_check()
         self.suspicious_domain_structure_check()
@@ -205,5 +223,10 @@ class EmailVerifier:
         self.lookalike_domain_check()
         self.brand_in_domain_check()
         self.username_domain_mismatch()
+        self.numeric_username_check()
+        self.random_username_check()
+        self.all_caps_display_name_check()
+        self.multiple_senders_check()
 
         return self._final_result()
+
