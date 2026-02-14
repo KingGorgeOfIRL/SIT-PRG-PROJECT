@@ -360,46 +360,42 @@ def scoringSystem(email: Email):
     attachment_only = attachment_Flag and not body_exists and not url_Flag
 
     final_score = 0.0
-
+    attachment_weight = 0
+    email_weight = 0
+    language_weight = 0
+    url_weight = 0
     if attachment_only:
-
-        final_score = (
-            docPercentage_result * 0.70 +
-            emailVerify_risk * 0.30
-        )
-
+        attachment_weight = 0.7
+        email_weight = 0.3
     elif not attachment_Flag and not url_Flag:
-        final_score = (
-            langAnalysis_total_percentage * 0.45 +
-            emailVerify_risk * 0.55
-        )
-
+        language_weight = 0.45
+        email_weight = 0.3
     elif not attachment_Flag and url_Flag:
-        final_score = (
-            langAnalysis_total_percentage * 0.35 +
-            emailVerify_risk * 0.40 +
-            urlPercentage_result * 0.25
-        )
+        language_weight = 0.35
+        email_weight = 0.4
+        url_weight = 0.25
+    elif attachment_weight and url_weight:
+        language_weight = 0.15
+        email_weight = 0.35
+        url_weight = 0.25
+        attachment_weight = 0.25
 
-    elif attachment_Flag and url_Flag:
-        final_score = (
-            langAnalysis_total_percentage * 0.15 +
-            emailVerify_risk * 0.35 +
-            urlPercentage_result * 0.25 +
-            docPercentage_result * 0.25
-        )
+    pass_threshold = 0.5
+    if docPercentage_result >= (attachment_weight * pass_threshold):
+        docPercentage_result = 100
+    elif urlPercentage_result >= (url_weight * pass_threshold):
+        urlPercentage_result = 100    
+    elif emailVerify_risk >= (email_weight * pass_threshold):
+        emailVerify_risk = 100
+    elif langAnalysis_total_percentage >= (language_weight * pass_threshold):
+        langAnalysis_total_percentage = 100
 
-    if docPercentage_result > score_adjustments.get("Document_Percentage"):
-        final_score += 20.0
-
-    elif urlPercentage_result > score_adjustments.get("url_percentage"):
-        final_score += 20.0
-    
-    elif emailVerify_risk > score_adjustments.get("Email_Verify_Percentage"):
-        final_score += 50.0
-
-    elif langAnalysis_total_percentage > score_adjustments.get("Language_Analysis_Percentage"):
-        final_score += 50.0
+    final_score = (
+        langAnalysis_total_percentage * language_weight +
+        emailVerify_risk * email_weight +
+        urlPercentage_result * url_weight +
+        docPercentage_result * attachment_weight
+    )
 
 
     return (
@@ -416,7 +412,6 @@ def scoringSystem(email: Email):
 
 
 if __name__ == "__main__":
-
     batch_scan_eml_folder("Resources/TESTCASES")
     
 
