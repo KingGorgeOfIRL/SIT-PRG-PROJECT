@@ -287,12 +287,12 @@ def scoringSystem(email:Email, pass_threshold:float = 0.35,is_offline:bool =True
     doc_score, doc_result = get_docChecking_scores(email)
     email_score,email_result = get_emailVerify_scores(email)
     matrix = init_keyword_matrix()
-    langauge_result = email_language_risk(email=email,matrix=matrix) if body_exists else None 
+    language_result = email_language_risk(email=email,matrix=matrix) if body_exists else None 
 
-    if langauge_result:
-        base_total = sum(float(v) for v in langauge_result.values())
+    if language_result:
+        base_total = sum(float(v) for v in language_result.values())
         flags = 0
-        for v in langauge_result.values():
+        for v in language_result.values():
             if float(v) * 2 > (100 / 4):
                 flags += 1
 
@@ -309,9 +309,9 @@ def scoringSystem(email:Email, pass_threshold:float = 0.35,is_offline:bool =True
     language_weight = 0.15
 
     if not body_exists:
-        email_weight = 0.0
+        email_weight = 0.55
         language_weight = 0.0
-        attachment_weight = 1.0
+        attachment_weight = 0.45
         url_weight = 0.0
     elif doc_result and url_result:
         url_weight = 0.25
@@ -355,7 +355,7 @@ def scoringSystem(email:Email, pass_threshold:float = 0.35,is_offline:bool =True
         "email_result":email_result,
         "url_result":url_result,
         "doc_result":doc_result,
-        'langauge_result':langauge_result,
+        'language_result':language_result,
         "email_score":email_score,
         "url_score":url_score,
         "doc_score":doc_score,
