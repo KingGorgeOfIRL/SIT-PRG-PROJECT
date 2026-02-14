@@ -144,11 +144,10 @@ def batch_scan_eml_folder(folder_path: str):
     print("\nBatch scan complete")
 
 def get_docChecking_scores(email: Email):
-    # Gets the email path from an email object from the Email class
-    if email.attachment_header:
-        checker = DocCheck(email.email_path)
-    else:
-        return 0, {}
+    if not email.attachment_header:
+        return 0.0, {}
+
+    checker = DocCheck(email.email_path)
     max_score, file_score, internet_connection, triggered_checks = checker.run_all_checks()
 
     final_file_score, triggered_checks, ranked_files = doc_calc(
@@ -157,36 +156,33 @@ def get_docChecking_scores(email: Email):
         internet_connection,
         triggered_checks
     )
+
     if isinstance(final_file_score, (list, tuple)) and len(final_file_score) > 0:
         docCheck_result = final_file_score[0]
     elif isinstance(final_file_score, dict):
         docCheck_result = final_file_score
     else:
         docCheck_result = {}
+
     scores = _extract_numeric_scores(docCheck_result)
-    if scores:
-        doc_score = sum(scores) / len(scores) 
-    else:
-        doc_score = 0
-    return doc_score, docCheck_result
-    
+    doc_score = (sum(scores) / len(scores)) if scores else 0.0
+
+    return doc_score, {
+        "docCheck_result": docCheck_result,
+        "triggered_checks": triggered_checks,
+        "ranked_files": ranked_files,
+        "internet_connection": internet_connection,
+    }
+
 
 def get_urlCheck_scores(email: Email):
-    # If score is higher than 100 (Maximum score for URLchecking is around 190), flag it as suspicious
-    # Note that self.urls.append() is used to add URLs to self.urls, if self.urls is empty self.url_score stays empty and there will be no loop
-
-    # Initialize UrlCheck object
     url_checker = UrlCheck(email.email_path)
-
-    # Run all checks (returns connectivity status and triggered checks)
     connectivity, triggered_checks = url_checker.run_all_checks()
 
-    # Calculate URL risk scores
     ranked_url_scores, triggered_checks = url_calc(connectivity, triggered_checks)
 
     url_scores: List[float] = []
 
-    # Common case: list of (url, score)
     if isinstance(ranked_url_scores, (list, tuple)):
         for item in ranked_url_scores:
             if isinstance(item, tuple) and len(item) == 2:
@@ -195,35 +191,34 @@ def get_urlCheck_scores(email: Email):
                 except (TypeError, ValueError):
                     pass
             elif isinstance(item, dict):
-                # fallback if per-url dicts appear
                 url_scores.extend(_extract_numeric_scores(item))
             else:
-                # fallback if a raw numeric list appears
                 try:
                     url_scores.append(float(item))
                 except (TypeError, ValueError):
                     pass
-
-    # Alternate case: dict of {url: score}
     elif isinstance(ranked_url_scores, dict):
         url_scores = _extract_numeric_scores(ranked_url_scores)
 
-    if url_scores:
-        total_score = sum(url_scores) / len(url_scores)
-    else:
-        total_score = 0
-    return total_score, url_scores
+    total_score = (sum(url_scores) / len(url_scores)) if url_scores else 0.0
+
+    # If your URL system can exceed 100, clamp here (or scale instead)
+    if total_score > 100.0:
+        total_score = 100.0
+
+    return total_score, {
+        "ranked_url_scores": ranked_url_scores,
+        "triggered_checks": triggered_checks,
+        "url_scores": url_scores,
+        "connectivity": connectivity,
+    }
 
 
 def get_emailVerify_scores(email: Email):
-    # edit_distance() is used for detecting sus typos like g00gle.com instead of google.com (Levenshtein edit distance)
-    # To use the EmailVerifier class you need to give normalize_domain() an EmailVerifier object, not a string
     verifier = EmailVerifier(email)
-    
-    result = verifier.run_verification()
+    result = verifier.run_verification() or {}
     email_score = float(result.get("risk_percentage", 0.0) or 0.0)
-    return email_score,result
-    
+    return email_score, result
 
 ################################################################################################################
 
@@ -434,6 +429,7 @@ def scoringSystem(email: Email, pass_threshold: float = 0.35, is_offline: bool =
             "attachment_weight": attachment_weight,
         },
     }
+
 if __name__ == "__main__":
     batch_scan_eml_folder("Resources/TESTCASES")
     
