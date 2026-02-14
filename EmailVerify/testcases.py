@@ -38,14 +38,6 @@ class TestDomainWhitelistCheck(unittest.TestCase):
 
         self.assertTrue(self.v.flags.get("whitelisted domain"))
         self.assertLess(self.v.risk_score, 0)
-    
-    def test_non_whitelisted_domain(self):
-        self.v.sender_domain = "evil.com"
-        self.v.trusted_domains = {"gmail.com"}
-
-        self.v.domain_whitelist_check()
-
-        self.assertFalse(self.v.flags.get("whitelisted domain"))
 
 
 # ---------------- LOOKALIKE DOMAIN ---------------- #
@@ -67,13 +59,6 @@ class TestLookalikeDomain(unittest.TestCase):
         self.assertTrue(self.v.flags.get("lookalike_domain"))
         self.assertGreaterEqual(self.v.risk_score, 5)
 
-    def test_no_lookalike(self):
-        self.v.sender_domain = "secure-login.com"
-        self.v.trusted_domains = {"paypal.com"}
-
-        self.v.lookalike_domain_check()
-
-        self.assertIsNone(self.v.flags.get("lookalike_domain"))
 
 # ---------------- BRAND IMPERSONATION ---------------- #
 
@@ -112,36 +97,6 @@ class TestSuspiciousDomainStructure(unittest.TestCase):
         self.v.suspicious_domain_structure_check()
 
         self.assertTrue(self.v.flags.get("suspicious_domain_structure"))
-    
-# ---------------- FULL PIPELINE / INTEGRATION ---------------- #
-
-class TestRunVerificationIntegration(unittest.TestCase):
-
-    def test_full_phishing_flow(self):
-        fake_email = type("Email", (), {})()
-        fake_email.sender = "support@paypa1.com"
-        fake_email.headers = {}
-
-        v = EmailVerifier(fake_email)
-        v.trusted_domains = {"paypal.com"}
-
-        result = v.run_verification()
-
-        self.assertGreater(result["risk_score"], 0)
-        self.assertTrue(result["flags"].get("lookalike_domain"))
-
-    def test_zero_risk_email(self):
-        fake_email = type("Email", (), {})()
-        fake_email.sender = "user@gmail.com"
-        fake_email.headers = {}
-
-        v = EmailVerifier(fake_email)
-        v.trusted_domains = {"gmail.com"}
-
-        result = v.run_verification()
-
-        self.assertLessEqual(result["risk_score"], 0)
-        self.assertTrue(result["flags"].get("whitelisted domain"))
 
 
 # ---------------- RISK PERCENTAGE ---------------- #

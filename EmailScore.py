@@ -24,7 +24,6 @@ import time
 
 # Blocks internet
 import socket
-
 _original_socket = socket.socket
 
 def block_internet(*args, **kwargs):
@@ -36,7 +35,20 @@ def enable_offline_mode():
 def disable_offline_mode():
     socket.socket = _original_socket
 
+# removes any temporary files in temp folder
+def clear_temp_files():
+    temp_path = "Resources/TEMP_FILES"
 
+    if not os.path.exists(temp_path):
+        return
+
+    for filename in os.listdir(temp_path):
+        file_path = os.path.join(temp_path, filename)
+        if os.path.isfile(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
 
 # Spinner animation
 def spinner(stop_event, label="Scanning"):
@@ -48,17 +60,6 @@ def spinner(stop_event, label="Scanning"):
         time.sleep(0.1)
     sys.stdout.write("\r")
 
-
-def ensure_eml(file_path: str) -> str:
-    """
-    If file is already .eml, return as-is.
-    Otherwise convert to .eml and return new path.
-    """
-    if file_path.lower().endswith(".eml"):
-        return file_path
-
-    print(f"Converting to .eml: {os.path.basename(file_path)}")
-    return ExtractEmail.convert_to_eml(file_path)
 
 # This function just double checks if the file that is not .eml (email blobs) have already
 # been converted to .eml before, preventing duplicates
@@ -122,32 +123,14 @@ def batch_scan_eml_folder(folder_path: str):
                 email_verify_score,
                 lang_score,
                 attachment_flag,
-                url_flag
+                url_flag,
+                final_score,
+                # Details is still needed here for unpacking, otherwise python will throw an error
+                # Details is not used for CLI, only gui
+                details
             ) = scoringSystem(email)
 
-            # ---- Final weighted score ----
-            final_score = 0.0
 
-            if not attachment_flag and not url_flag:
-                final_score = (
-                    lang_score * 0.45 +
-                    email_verify_score * 0.55
-                )
-
-            elif not attachment_flag and url_flag:
-                final_score = (
-                    lang_score * 0.35 +
-                    email_verify_score * 0.40 +
-                    url_score * 0.25
-                )
-
-            elif attachment_flag and url_flag:
-                final_score = (
-                    lang_score * 0.15 +
-                    email_verify_score * 0.35 +
-                    url_score * 0.25 +
-                    doc_score * 0.25
-                )
 
         except Exception as e:
             stop_event.set()
@@ -169,38 +152,46 @@ def batch_scan_eml_folder(folder_path: str):
 
 
 
-def get_docChecking_scores(email: Email):
-    
-    # Grabs the files and places them in a list called "list_of_files"
-    #object = DocChecking("Resources/DATASET/Project Proposal.eml")
-    #list_of_files = object.files
 
-    #If got document then call DocChecking
+def get_docChecking_scores(email: Email):
+    #print("\nStart of get_docChecking_scores ")
 
     # Gets the email path from an email object from the Email class
     checker = DocCheck(email.email_path)
-    max_score, file_score, internet_connection, triggered_checks = checker.run_all_checks()
-    dict_result = doc_calc(max_score, file_score, internet_connection, triggered_checks)
 
-    #print(dict_result)
-    return dict_result
+    max_score, file_score, internet_connection, triggered_checks = checker.run_all_checks()
+
+    final_file_score, triggered_checks, ranked_files = doc_calc(
+        max_score,
+        file_score,
+        internet_connection,
+        triggered_checks
+    )
+
+    print(final_file_score)
+    return final_file_score
     
 
-
-
 def get_urlCheck_scores(email: Email):
+    #print("\nStart of get_urlCheck_scores ")
     # If score is higher than 100 (Maximum score for URLchecking is around 190), flag it as suspicious
     # Note that self.urls.append() is used to add URLs to self.urls, if self.urls is empty self.url_score stays empty and there will be no loop
 
-    u = UrlCheck(email.email_path)
-    max_score, url_scores, internet_connection, triggered_checks = u.run_all_checks()
-    result = url_calc(max_score, url_scores, internet_connection, triggered_checks)
+    # Initialize UrlCheck object
+    url_checker = UrlCheck(email.email_path)
 
-    
-    return result
+    # Run all checks (returns connectivity status and triggered checks)
+    connectivity, triggered_checks = url_checker.run_all_checks()
+
+    # Calculate URL risk scores
+    ranked_url_scores, triggered_checks = url_calc(connectivity, triggered_checks)
+
+    print(ranked_url_scores)
+    return ranked_url_scores, triggered_checks
 
 
 def get_emailVerify_scores(email: Email):
+    #print("\nStart of get_emailVerify_scores ")
     # edit_distance() is used for detecting sus typos like g00gle.com instead of google.com (Levenshtein edit distance)
     # To use the EmailVerifier class you need to give normalize_domain() an EmailVerifier object, not a string
     verifier = EmailVerifier(email)
@@ -220,13 +211,19 @@ def scoringSystem(email: Email):
 
     #------------------------------------- Doc Checking & URL Check section ----------------------------#
     
+    clear_temp_files()
 
+    # Details dictionary is used for logging
+    details = {} 
 
     # ----- Attachments -----
     docPercentage_result = 0.0
     attachment_Flag = False
 
+
     call_docCheck = get_docChecking_scores(email)
+    details["doc_check_raw"] = call_docCheck
+
 
     # This just checks if call_docCheck is a list or a tuple, and that its not returning an empty variable
     if isinstance(call_docCheck, (list, tuple)) and len(call_docCheck) > 0:
@@ -241,9 +238,20 @@ def scoringSystem(email: Email):
 
 
     if docCheck_result:
-        scores = [float(v) for v in docCheck_result.values()]
-        num_of_attachments = len(scores)
+        if isinstance(docCheck_result, dict):
+            scores = [float(v) for v in docCheck_result.values()]
+        elif isinstance(docCheck_result, list):
+            # Convert list of numbers or dicts to floats
+            scores = []
+            for item in docCheck_result:
+                if isinstance(item, dict):
+                    scores.extend(float(v) for v in item.values())
+                else:
+                    scores.append(float(item))
+        else:
+            scores = []
 
+        num_of_attachments = len(scores)
     #     # Final percentage calculated by dividing total score by a percentage depending on how many attachments
     #     # there are, and then multiplying it by 100 again for final percentage
         if num_of_attachments > 0:
@@ -251,39 +259,54 @@ def scoringSystem(email: Email):
             attachment_Flag = True
 
 
+    details["doc_percentage"] = docPercentage_result
+    details["attachment_flag"] = attachment_Flag
 
-    # ----- URLs -----
+
+        # ----- URLs -----
     urlPercentage_result = 0.0
     url_Flag = False
 
-
     # If running offline scan, URL checks are disabled
     if is_offline():
-
         urlPercentage_result = 0.0
         url_Flag = False
 
     else:
-
         call_urlCheck = get_urlCheck_scores(email)
+        details["url_check_raw"] = call_urlCheck
 
-        # If else statement is used to double check that no. of urls is not 0, causing an error 
+        # Extract numeric scores safely
+        scores = []
+
         if isinstance(call_urlCheck, (list, tuple)) and len(call_urlCheck) > 0:
-            urlCheck_result = call_urlCheck[0]
-
+            for item in call_urlCheck:
+                if isinstance(item, tuple) and len(item) == 2:
+                    # item = (url, score)
+                    try:
+                        scores.append(float(item[1]))
+                    except (ValueError, TypeError):
+                        pass
+                elif isinstance(item, (int, float, str)):
+                    try:
+                        scores.append(float(item))
+                    except (ValueError, TypeError):
+                        pass
         elif isinstance(call_urlCheck, dict):
-            urlCheck_result = call_urlCheck
+            for v in call_urlCheck.values():
+                try:
+                    scores.append(float(v))
+                except (ValueError, TypeError):
+                    pass
 
-        else:
-            urlCheck_result = {}
+        # Calculate final percentage
+        num_of_urls = len(scores)
+        if num_of_urls > 0:
+            urlPercentage_result = sum(scores) / (num_of_urls * 100) * 100
+            url_Flag = True
 
-        if urlCheck_result:
-            scores = [float(v) for v in urlCheck_result.values()]
-            num_of_urls = len(scores)
-
-            if num_of_urls > 0:
-                urlPercentage_result = sum(scores) / (num_of_urls * 100) * 100
-                url_Flag = True
+    details["url_percentage"] = urlPercentage_result
+    details["url_flag"] = url_Flag
 
 
 
@@ -291,28 +314,22 @@ def scoringSystem(email: Email):
 
 
     #------------------------------------------ Email Verify section --------------------------------------#
+    
     emailVerify_Dict = get_emailVerify_scores(email)
+    details["email_verify_raw"] = emailVerify_Dict
 
     emailVerify_risk = emailVerify_Dict.get("risk_percentage", 0.0)
+    details["email_verify_risk"] = emailVerify_risk
 
-    #------------------------------------------ Language Analysis section --------------------------------------#   
-    # Default weightage
-    varied_weightage = 45
+    #------------------------------------------ Language Analysis and weightage section --------------------------------------#   
+    langAnalysis_dict = {}
 
-    # 45% Language, 55% email, urls no, attachment no
-    if attachment_Flag == False and url_Flag == False:
-        varied_weightage = 45
-
-
-    # 35% Language, 40% email, 25% Url, attachment no
-    elif attachment_Flag == False and url_Flag == True:
-        varied_weightage = 35
-
-
-    # 15%, language, 35% email, 25% url, 25% attachment
-    elif attachment_Flag == True and url_Flag == True:
-        varied_weightage = 15
-
+    score_adjustments = {
+        "Document_Percentage" : 50.0,
+        "url_percentage" : 20.0,
+        "Email_Verify_Percentage" : 6.0,
+        "Language_Analysis_Percentage" : 10.0,
+    }
 
     # This if else statement checks if the email is empty, doesn't have any text
     if email.text and email.text.strip():
@@ -320,18 +337,65 @@ def scoringSystem(email: Email):
         matrix = init_keyword_matrix()
         langAnalysis_dict = email_language_risk(email=email, 
                                                 matrix=matrix, 
-                                                total_weightage = varied_weightage, 
+                                                total_weightage = 100, 
                                                 base_confidence_score=100
                                                 )
-        total_values = 0.0
 
-        for values in langAnalysis_dict.values():
-            total_values = total_values + values
-
-        langAnalysis_total_percentage = (total_values / varied_weightage) * 100
+        langAnalysis_total_percentage = sum(langAnalysis_dict.values())
     
     else:
         langAnalysis_total_percentage = 0.0
+
+
+    details["language_raw"] = langAnalysis_dict
+    details["language_percentage"] = langAnalysis_total_percentage
+
+    # -------------------------------- Final Weighted Score -------------------------------- #
+
+    body_exists = bool(email.text and email.text.strip())
+    attachment_only = attachment_Flag and not body_exists and not url_Flag
+
+    final_score = 0.0
+
+    if attachment_only:
+
+        final_score = (
+            docPercentage_result * 0.70 +
+            emailVerify_risk * 0.30
+        )
+
+    elif not attachment_Flag and not url_Flag:
+        final_score = (
+            langAnalysis_total_percentage * 0.45 +
+            emailVerify_risk * 0.55
+        )
+
+    elif not attachment_Flag and url_Flag:
+        final_score = (
+            langAnalysis_total_percentage * 0.35 +
+            emailVerify_risk * 0.40 +
+            urlPercentage_result * 0.25
+        )
+
+    elif attachment_Flag and url_Flag:
+        final_score = (
+            langAnalysis_total_percentage * 0.15 +
+            emailVerify_risk * 0.35 +
+            urlPercentage_result * 0.25 +
+            docPercentage_result * 0.25
+        )
+
+    if docPercentage_result > score_adjustments.get("Document_Percentage"):
+        final_score += 20.0
+
+    elif urlPercentage_result > score_adjustments.get("url_percentage"):
+        final_score += 20.0
+    
+    elif emailVerify_risk > score_adjustments.get("Email_Verify_Percentage"):
+        final_score += 50.0
+
+    elif langAnalysis_total_percentage > score_adjustments.get("Language_Analysis_Percentage"):
+        final_score += 50.0
 
 
     return (
@@ -340,12 +404,18 @@ def scoringSystem(email: Email):
         emailVerify_risk, 
         langAnalysis_total_percentage,
         attachment_Flag,
-        url_Flag
+        url_Flag,
+        final_score,
+        details
     )
+
 
 
 if __name__ == "__main__":
 
-    batch_scan_eml_folder("Resources/DATASET")
+    batch_scan_eml_folder("Resources/TESTCASES")
+    
+
+
 
 
