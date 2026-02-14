@@ -73,9 +73,7 @@ class EmailVerifier:
     #checks if sender domain is trusted
     def domain_whitelist_check(self):
         domain = self.sender_domain
-        print(domain)
         for trusted in self.trusted_domains:
-            print(trusted)
             if domain == trusted or domain.endswith("." + trusted):
                 self.flags["whitelisted domain"] = True
                 self.risk_score -= 3

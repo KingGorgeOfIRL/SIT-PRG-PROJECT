@@ -348,8 +348,10 @@ def scoringSystem(email:Email, pass_threshold:float = 0.35,is_offline:bool =True
         language_score = 100
     if url_score/100 > pass_threshold:
         url_score = 100
-    if email_score/100 > pass_threshold:
+    if email_score/10 > pass_threshold and is_offline:
         email_score = 100
+    elif email_score/100 > pass_threshold:
+         email_score = 100
     if doc_score/100 > pass_threshold:
         doc_score = 100
 
