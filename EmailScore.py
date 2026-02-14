@@ -69,7 +69,6 @@ def ensure_eml(file_path: str) -> str:
 
     return ExtractEmail.convert_to_eml(file_path)
 
-
 # Goes through a folder and scans each file one by one
 def batch_scan_eml_folder(folder_path: str):
     if not os.path.isdir(folder_path):
@@ -238,7 +237,7 @@ def _extract_numeric_scores(obj: Any) -> List[float]:
     return scores
 
 
-def scoringSystem(email: Email, pass_threshold = 0.35):
+def scoringSystem(email: Email, pass_threshold: float = 0.35):
     #------------------------------------- Doc Checking & URL Check section ----------------------------#
 
     clear_temp_files()
@@ -273,35 +272,37 @@ def scoringSystem(email: Email, pass_threshold = 0.35):
 
     if is_offline():
         details["url_check_raw"] = None
-        urlPercentage_result = 0.0
-        url_Flag = False
     else:
-        call_urlCheck = get_urlCheck_scores(email)
-        details["url_check_raw"] = call_urlCheck
+        # get_urlCheck_scores returns (ranked_url_scores, triggered_checks)
+        ranked_url_scores, triggered_checks = get_urlCheck_scores(email)
+        details["url_check_raw"] = {
+            "ranked_url_scores": ranked_url_scores,
+            "triggered_checks": triggered_checks,
+        }
 
         url_scores: List[float] = []
 
-        if isinstance(call_urlCheck, (list, tuple)) and len(call_urlCheck) > 0:
-            for item in call_urlCheck:
-                # item could be (url, score)
+        # Common case: list of (url, score)
+        if isinstance(ranked_url_scores, (list, tuple)):
+            for item in ranked_url_scores:
                 if isinstance(item, tuple) and len(item) == 2:
                     try:
                         url_scores.append(float(item[1]))
-                    except (ValueError, TypeError):
+                    except (TypeError, ValueError):
                         pass
+                elif isinstance(item, dict):
+                    # fallback if per-url dicts appear
+                    url_scores.extend(_extract_numeric_scores(item))
                 else:
-                    # fallback: try to parse item as numeric
+                    # fallback if a raw numeric list appears
                     try:
                         url_scores.append(float(item))
-                    except (ValueError, TypeError):
+                    except (TypeError, ValueError):
                         pass
 
-        elif isinstance(call_urlCheck, dict):
-            for v in call_urlCheck.values():
-                try:
-                    url_scores.append(float(v))
-                except (ValueError, TypeError):
-                    pass
+        # Alternate case: dict of {url: score}
+        elif isinstance(ranked_url_scores, dict):
+            url_scores = _extract_numeric_scores(ranked_url_scores)
 
         if url_scores:
             urlPercentage_result = sum(url_scores) / len(url_scores)  # average 0..100
@@ -335,10 +336,8 @@ def scoringSystem(email: Email, pass_threshold = 0.35):
             base_confidence_score=100
         ) or {}
 
-        # Base total is just the sum once
         base_total = sum(float(v) for v in langAnalysis_dict.values())
 
-        # Flag logic (kept conceptually similar to yours, but without double-counting)
         flags = 0
         for v in langAnalysis_dict.values():
             if float(v) * 2 > (total_weightage / 4):
@@ -355,7 +354,6 @@ def scoringSystem(email: Email, pass_threshold = 0.35):
 
     # -------------------------------- Final Weighted Score -------------------------------- #
 
-    # Default weights
     attachment_weight = 0.0
     url_weight = 0.0
     email_weight = 0.35
@@ -383,7 +381,6 @@ def scoringSystem(email: Email, pass_threshold = 0.35):
         url_weight = 0.0
         attachment_weight = 0.0
 
-    # Optional safety: normalize in case future edits introduce drift
     wsum = email_weight + language_weight + url_weight + attachment_weight
     if wsum > 0 and abs(wsum - 1.0) > 1e-9:
         email_weight /= wsum
@@ -399,8 +396,6 @@ def scoringSystem(email: Email, pass_threshold = 0.35):
     }
 
     # Threshold boosting: boost the strongest contributor if it clears pass_threshold
-    pass_threshold = 0.35
-
     contributions = {
         "language": (langAnalysis_total_percentage / 100.0) * language_weight if body_exists else 0.0,
         "email_verify": (emailVerify_risk / 100.0) * email_weight if body_exists else 0.0,
@@ -409,7 +404,6 @@ def scoringSystem(email: Email, pass_threshold = 0.35):
     }
     details["contributions_preboost"] = contributions
 
-    # Choose max contributor to boost (instead of fixed if/elif order)
     max_key = max(contributions, key=contributions.get)
     if contributions[max_key] >= pass_threshold:
         if max_key == "doc":
@@ -421,13 +415,13 @@ def scoringSystem(email: Email, pass_threshold = 0.35):
         elif max_key == "language":
             langAnalysis_total_percentage = 100.0
 
-    # Final score
     final_score = (
         langAnalysis_total_percentage * language_weight +
         emailVerify_risk * email_weight +
         urlPercentage_result * url_weight +
         docPercentage_result * attachment_weight
     )
+
     details["final_score"] = final_score
 
     return (
