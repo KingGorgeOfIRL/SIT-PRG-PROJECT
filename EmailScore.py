@@ -357,22 +357,20 @@ def scoringSystem(email: Email):
     # -------------------------------- Final Weighted Score -------------------------------- #
 
     body_exists = bool(email.text and email.text.strip())
-    attachment_only = attachment_Flag and not body_exists and not url_Flag
 
     final_score = 0
     attachment_weight = 0
     email_weight = 0.35
     language_weight = 0.15
     url_weight = 0
-
-    if attachment_weight and url_weight:
+    if attachment_Flag and url_Flag:
         url_weight = 0.25
         attachment_weight = 0.25
-    elif attachment_weight:
+    elif attachment_Flag:
         attachment_weight = 0.25
         email_weight += 0.05
         language_weight += 0.2
-    elif url_weight:
+    elif url_Flag:
         url_weight = 0.25
         email_weight += 0.05
         language_weight += 0.2
@@ -380,8 +378,7 @@ def scoringSystem(email: Email):
         email_weight += 0.15
         language_weight += 0.3
 
-
-    pass_threshold = 0.75
+    pass_threshold = 0.5
     if docPercentage_result >= (attachment_weight * pass_threshold):
         docPercentage_result = 100
     elif urlPercentage_result >= (url_weight * pass_threshold):
