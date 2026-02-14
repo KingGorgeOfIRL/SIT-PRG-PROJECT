@@ -9,7 +9,7 @@ from DocChecking.DocCheck import risk_score_calculate as doc_calc
 from URLChecking.UrlCheck import UrlCheck
 from URLChecking.UrlCheck import risk_score_calculate as url_calc
 from EmailVerify.main import EmailVerifier, Email
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 from LangAnalysis.main import *
 from LangAnalysis.email_extract import Email as ExtractEmail
 
@@ -278,46 +278,76 @@ def _extract_numeric_scores(obj: Any) -> List[float]:
 
     return scores
 
-def scoringSystem(email:Email, pass_threshold:float = 0.35,is_offline:bool =True):
 
-    #get feature tunction results
-    body_exists = bool(email.text and email.text.strip())
+
+def scoringSystem(email: Email, pass_threshold: float = 0.35, is_offline: bool = True) -> Dict[str, Any]:
+    def cap100(x: Any) -> float:
+        """Clamp numeric-ish to [0, 100]. Non-numeric -> 0."""
+        try:
+            v = float(x)
+        except (TypeError, ValueError):
+            return 0.0
+        if v < 0.0:
+            return 0.0
+        if v > 100.0:
+            return 100.0
+        return v
+
+    # -------------------- Get feature function results -------------------- #
+    body_exists = bool(getattr(email, "text", None) and email.text.strip())
+
+    # URL
     if is_offline:
-        url_score, url_result = 0, None
+        url_score, url_result = 0.0, None
     else:
-        url_score,url_result = get_urlCheck_scores(email)
+        # Expected: (score, result)
+        url_score, url_result = get_urlCheck_scores(email)
+        url_score = cap100(url_score)
+
+    # Docs
     doc_score, doc_result = get_docChecking_scores(email)
-    email_score,email_result = get_emailVerify_scores(email)
-    matrix = init_keyword_matrix()
-    language_result = email_language_risk(email=email,matrix=matrix) if body_exists else None 
+    doc_score = cap100(doc_score)
 
-    if language_result:
-        base_total = sum(float(v) for v in language_result.values())
-        flags = 0
-        for v in language_result.values():
-            if float(v) * 2 > (100 / 4):
-                flags += 1
+    # Email verify
+    email_score, email_result = get_emailVerify_scores(email)
+    email_score = cap100(email_score)
 
-        bonus = 0.0
-        if flags >= 2:
-            bonus = (100 / 4) * flags
+    # Language
+    language_result = None
+    language_score = 0.0
+    if body_exists:
+        matrix = init_keyword_matrix()
+        language_result = email_language_risk(email=email, matrix=matrix) or {}
 
-        language_score = base_total + bonus
+        if language_result:
+            base_total = sum(cap100(v) for v in language_result.values())
 
-    #get weights
+            flags = 0
+            for v in language_result.values():
+                if cap100(v) * 2 > (100.0 / 4.0):
+                    flags += 1
+
+            bonus = (100.0 / 4.0) * flags if flags >= 2 else 0.0
+            language_score = cap100(base_total + bonus)
+
+    # -------------------- Get weights -------------------- #
     attachment_weight = 0.0
     url_weight = 0.0
     email_weight = 0.35
     language_weight = 0.15
 
-    if doc_result and url_result:
+    has_doc = bool(doc_result)
+    has_url = bool(url_result) and (not is_offline)
+    has_lang = bool(language_result) and body_exists
+
+    if has_doc and has_url:
         url_weight = 0.25
         attachment_weight = 0.25
-    elif doc_result:
+    elif has_doc:
         attachment_weight = 0.25
         email_weight += 0.05
         language_weight += 0.20
-    elif url_result:
+    elif has_url:
         url_weight = 0.25
         email_weight += 0.05
         language_weight += 0.20
@@ -325,55 +355,85 @@ def scoringSystem(email:Email, pass_threshold:float = 0.35,is_offline:bool =True
         email_weight = 0.55
         language_weight = 0.45
         url_weight = 0.0
-    
+        attachment_weight = 0.0
+
+    # If no body, language feature is not available → redistribute language_weight away
     if not body_exists:
-        num_weights = 0
-        if url_weight:
-            num_weights += 1
-        if attachment_weight:
-            num_weights += 1
-        email_weight += language_weight/num_weights
-        url_weight += language_weight/num_weights
-        attachment_weight += language_weight/num_weights
+        # language score is forced to 0 and its weight should be redistributed
+        language_score = 0.0
+        redistribute = language_weight
+        language_weight = 0.0
 
+        targets = []
+        # Decide where language weight should go
+        # - doc/url if present
+        # - otherwise email
+        if has_url and url_weight > 0:
+            targets.append("url")
+        if has_doc and attachment_weight > 0:
+            targets.append("doc")
+        targets.append("email")  # always allow email as fallback
 
+        share = redistribute / len(targets)
+        for t in targets:
+            if t == "url":
+                url_weight += share
+            elif t == "doc":
+                attachment_weight += share
+            else:
+                email_weight += share
+
+    # Normalize weights defensively
     wsum = email_weight + language_weight + url_weight + attachment_weight
-    if wsum > 0 and abs(wsum - 1.0) > 1e-9:
+    if wsum > 0:
         email_weight /= wsum
         language_weight /= wsum
         url_weight /= wsum
         attachment_weight /= wsum
 
-    if language_score/100 > pass_threshold:
-        language_score = 100
-    if url_score/100 > pass_threshold:
-        url_score = 100
-    if email_score/10 > pass_threshold and is_offline:
-        email_score = 100
-    elif email_score/100 > pass_threshold:
-         email_score = 100
-    if doc_score/100 > pass_threshold:
-        doc_score = 100
+    # -------------------- Thresholding (consistent 0..100) -------------------- #
+    # pass_threshold is in 0..1; compare score/100 to threshold
+    if has_lang and (language_score / 100.0) >= pass_threshold:
+        language_score = 100.0
+    if has_url and (url_score / 100.0) >= pass_threshold:
+        url_score = 100.0
+    if (email_score / 100.0) >= pass_threshold:
+        email_score = 100.0
+    if has_doc and (doc_score / 100.0) >= pass_threshold:
+        doc_score = 100.0
 
+    # Ensure caps after boosts
+    language_score = cap100(language_score)
+    url_score = cap100(url_score)
+    email_score = cap100(email_score)
+    doc_score = cap100(doc_score)
+
+    # -------------------- Final score -------------------- #
     final_score = (
         language_score * language_weight +
         email_score * email_weight +
         url_score * url_weight +
         doc_score * attachment_weight
     )
-    output = {
-        "email_result":email_result,
-        "url_result":url_result,
-        "doc_result":doc_result,
-        'language_result':language_result,
-        "email_score":email_score,
-        "url_score":url_score,
-        "doc_score":doc_score,
-        "language_score":language_score,
-        "final_score": final_score
-    }
-    return output
+    final_score = cap100(final_score)
 
+    return {
+        "email_result": email_result,
+        "url_result": url_result,
+        "doc_result": doc_result,
+        "language_result": language_result,
+        "email_score": email_score,
+        "url_score": url_score,
+        "doc_score": doc_score,
+        "language_score": language_score,
+        "final_score": final_score,
+        "weights": {
+            "email_weight": email_weight,
+            "language_weight": language_weight,
+            "url_weight": url_weight,
+            "attachment_weight": attachment_weight,
+        },
+    }
 if __name__ == "__main__":
     batch_scan_eml_folder("Resources/TESTCASES")
     
