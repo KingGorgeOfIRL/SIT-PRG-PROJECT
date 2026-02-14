@@ -14,6 +14,36 @@ from EmailVerify.main import Email
 
 from LangAnalysis.email_extract import *
 
+def write_log_file(filename, final_score, level, details):
+    log_folder = "Finished Email Scans"
+    os.makedirs(log_folder, exist_ok=True)
+
+    base_name = os.path.splitext(os.path.basename(filename))[0]
+    log_file_path = os.path.join(log_folder, f"{base_name}.txt")
+
+    with open(log_file_path, "w", encoding="utf-8") as f:
+        f.write(f"File: {filename}\n")
+        f.write(f"Final Risk: {final_score}\n")
+        f.write(f"Level: {level}\n")
+        f.write("=" * 60 + "\n\n")
+
+        for key, value in details.items():
+            f.write(f"[{key}]\n")
+
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    f.write(f"  {k}: {v}\n")
+
+            elif isinstance(value, list):
+                for item in value:
+                    f.write(f"  - {item}\n")
+
+            else:
+                f.write(f"  {value}\n")
+
+            f.write("\n")
+
+    return log_file_path
 
 class EmailScannerGUI(tk.Tk):
     def __init__(self):
@@ -308,8 +338,6 @@ class EmailScannerGUI(tk.Tk):
             self.temp_eml_files.clear()
 
         
-
-
     def scan_folder_wrapper(self):
         try:
             self.scan_folder()
@@ -348,7 +376,6 @@ class EmailScannerGUI(tk.Tk):
 
     def scan_single_worker(self, file_path):
 
-        
         # Track temporary .eml files
         temp_files = []
 
@@ -397,8 +424,6 @@ class EmailScannerGUI(tk.Tk):
                 os.remove(temp_file)
             except Exception as e:
                 print(f"Failed to delete temp file {temp_file}: {e}")
-
-
 
     def open_email_details(self, event):
         selected = self.tree.selection()
@@ -467,9 +492,6 @@ class EmailScannerGUI(tk.Tk):
         else:
             print("Log file not found.")
 
-
-
-
     def show_loading(self, total):
 
         self.total_emails = total
@@ -499,18 +521,16 @@ class EmailScannerGUI(tk.Tk):
         if self.total_emails > 0:
             self.chart_button.config(state="normal")
 
-
     def update_progress(self):
         self.progress["value"] = self.processed_emails
         self.progress_text.config(
             text=f"{self.processed_emails} / {self.total_emails}"
         )
 
-
     def add_result_row(self, filename, email, score, level, tag, details):
         
         # --- Write log file for this email ---
-        log_path = self.write_log_file(
+        log_path = write_log_file(
             filename=filename,
             final_score=f"{score:.2f}%",
             level=level,
@@ -549,40 +569,6 @@ class EmailScannerGUI(tk.Tk):
         elif level == "High":
             self.high_count += 1
 
-
-
-    def write_log_file(self, filename, final_score, level, details):
-        log_folder = "Finished Email Scans"
-        os.makedirs(log_folder, exist_ok=True)
-
-        base_name = os.path.splitext(os.path.basename(filename))[0]
-        log_file_path = os.path.join(log_folder, f"{base_name}.txt")
-
-        with open(log_file_path, "w", encoding="utf-8") as f:
-            f.write(f"File: {filename}\n")
-            f.write(f"Final Risk: {final_score}\n")
-            f.write(f"Level: {level}\n")
-            f.write("=" * 60 + "\n\n")
-
-            for key, value in details.items():
-                f.write(f"[{key}]\n")
-
-                if isinstance(value, dict):
-                    for k, v in value.items():
-                        f.write(f"  {k}: {v}\n")
-
-                elif isinstance(value, list):
-                    for item in value:
-                        f.write(f"  - {item}\n")
-
-                else:
-                    f.write(f"  {value}\n")
-
-                f.write("\n")
-
-        return log_file_path
-
-
     def clear_logs(self):
         log_folder = "Finished Email Scans"
 
@@ -614,7 +600,6 @@ class EmailScannerGUI(tk.Tk):
             "Logs Cleared",
             f"Deleted {deleted_count} log file(s)."
         )
-
 
     def show_pie_chart(self):
         total = self.low_count + self.medium_count + self.high_count
@@ -698,9 +683,9 @@ class EmailScannerGUI(tk.Tk):
 
     @staticmethod
     def risk_level(score):
-        if score < 15:
+        if score < 20:
             return "Low", "low"
-        elif score < 51:
+        elif score < 60:
             return "Medium", "medium"
         else:
             return "High", "high"
