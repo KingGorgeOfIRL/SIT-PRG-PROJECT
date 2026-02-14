@@ -421,7 +421,7 @@ def scoringSystem(email: Email, pass_threshold: float = 0.35):
 
     final_score = (
         langAnalysis_total_percentage * language_weight +
-        emailVerify_risk +
+        emailVerify_risk * email_weight+
         urlPercentage_result * url_weight +
         docPercentage_result * attachment_weight
     )
