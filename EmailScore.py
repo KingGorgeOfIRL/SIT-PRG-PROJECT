@@ -145,11 +145,18 @@ def batch_scan_eml_folder(folder_path: str):
 
 def get_docChecking_scores(email: Email):
     # Gets the email path from an email object from the Email class
-    if email.attachment_header:
+    if email.attachment_headery:
         checker = DocCheck(email.email_path)
     else:
         return 0, {}
-    final_file_score, triggered_checks, ranked_files = doc_calc(checker.run_all_checks())
+    max_score, file_score, internet_connection, triggered_checks = checker.run_all_checks()
+
+    final_file_score, triggered_checks, ranked_files = doc_calc(
+        max_score,
+        file_score,
+        internet_connection,
+        triggered_checks
+    )
     if isinstance(final_file_score, (list, tuple)) and len(final_file_score) > 0:
         docCheck_result = final_file_score[0]
     elif isinstance(final_file_score, dict):
