@@ -155,8 +155,18 @@ def get_docChecking_scores(email: Email):
         internet_connection,
         triggered_checks
     )
-
-    return final_file_score
+    if isinstance(final_file_score, (list, tuple)) and len(final_file_score) > 0:
+        docCheck_result = final_file_score[0]
+    elif isinstance(final_file_score, dict):
+        docCheck_result = final_file_score
+    else:
+        docCheck_result = {}
+    scores = _extract_numeric_scores(docCheck_result)
+    if scores:
+        doc_score = sum(scores) / len(scores) 
+    else:
+        doc_score = 0
+    return doc_score, docCheck_result
     
 
 def get_urlCheck_scores(email: Email):
@@ -171,7 +181,36 @@ def get_urlCheck_scores(email: Email):
 
     # Calculate URL risk scores
     ranked_url_scores, triggered_checks = url_calc(connectivity, triggered_checks)
-    return ranked_url_scores, triggered_checks
+
+    url_scores: List[float] = []
+
+    # Common case: list of (url, score)
+    if isinstance(ranked_url_scores, (list, tuple)):
+        for item in ranked_url_scores:
+            if isinstance(item, tuple) and len(item) == 2:
+                try:
+                    url_scores.append(float(item[1]))
+                except (TypeError, ValueError):
+                    pass
+            elif isinstance(item, dict):
+                # fallback if per-url dicts appear
+                url_scores.extend(_extract_numeric_scores(item))
+            else:
+                # fallback if a raw numeric list appears
+                try:
+                    url_scores.append(float(item))
+                except (TypeError, ValueError):
+                    pass
+
+    # Alternate case: dict of {url: score}
+    elif isinstance(ranked_url_scores, dict):
+        url_scores = _extract_numeric_scores(ranked_url_scores)
+
+    if url_scores:
+        total_score = sum(url_scores) / len(url_scores)
+    else:
+        total_score = 0
+    return total_score, url_scores
 
 
 def get_emailVerify_scores(email: Email):
@@ -180,7 +219,8 @@ def get_emailVerify_scores(email: Email):
     verifier = EmailVerifier(email)
     
     result = verifier.run_verification()
-    return result
+    email_score = float(result.get("risk_percentage", 0.0) or 0.0)
+    return email_score,result
     
 
 ################################################################################################################
@@ -236,124 +276,33 @@ def _extract_numeric_scores(obj: Any) -> List[float]:
 
     return scores
 
+def scoringSystem(email:Email, pass_threshold:float = 0.35,is_offline:bool =True):
 
-def scoringSystem(email: Email, pass_threshold: float = 0.35):
-    #------------------------------------- Doc Checking & URL Check section ----------------------------#
-
-    clear_temp_files()
-    details: Dict[str, Any] = {}
-
-    # ----- Attachments -----
-    docPercentage_result = 0.0
-    attachment_Flag = False
-
-    call_docCheck = get_docChecking_scores(email)
-    details["doc_check_raw"] = call_docCheck
-
-    # Normalize docCheck_result into something score-extractable
-    if isinstance(call_docCheck, (list, tuple)) and len(call_docCheck) > 0:
-        docCheck_result = call_docCheck[0]
-    elif isinstance(call_docCheck, dict):
-        docCheck_result = call_docCheck
-    else:
-        docCheck_result = {}
-
-    scores = _extract_numeric_scores(docCheck_result)
-    if scores:
-        docPercentage_result = sum(scores) / len(scores)  # average 0..100
-        attachment_Flag = True
-
-    details["doc_percentage"] = docPercentage_result
-    details["attachment_flag"] = attachment_Flag
-
-    # ----- URLs -----
-    urlPercentage_result = 0.0
-    url_Flag = False
-
-    if is_offline():
-        details["url_check_raw"] = None
-    else:
-        # get_urlCheck_scores returns (ranked_url_scores, triggered_checks)
-        ranked_url_scores, triggered_checks = get_urlCheck_scores(email)
-        details["url_check_raw"] = {
-            "ranked_url_scores": ranked_url_scores,
-            "triggered_checks": triggered_checks,
-        }
-
-        url_scores: List[float] = []
-
-        # Common case: list of (url, score)
-        if isinstance(ranked_url_scores, (list, tuple)):
-            for item in ranked_url_scores:
-                if isinstance(item, tuple) and len(item) == 2:
-                    try:
-                        url_scores.append(float(item[1]))
-                    except (TypeError, ValueError):
-                        pass
-                elif isinstance(item, dict):
-                    # fallback if per-url dicts appear
-                    url_scores.extend(_extract_numeric_scores(item))
-                else:
-                    # fallback if a raw numeric list appears
-                    try:
-                        url_scores.append(float(item))
-                    except (TypeError, ValueError):
-                        pass
-
-        # Alternate case: dict of {url: score}
-        elif isinstance(ranked_url_scores, dict):
-            url_scores = _extract_numeric_scores(ranked_url_scores)
-
-        if url_scores:
-            urlPercentage_result = sum(url_scores) / len(url_scores)  # average 0..100
-            url_Flag = True
-
-    details["url_percentage"] = urlPercentage_result
-    details["url_flag"] = url_Flag
-
-    #------------------------------------------ Email Verify section --------------------------------------#
-
-    emailVerify_Dict = get_emailVerify_scores(email) or {}
-    details["email_verify_raw"] = emailVerify_Dict
-
-    emailVerify_risk = float(emailVerify_Dict.get("risk_percentage", 0.0) or 0.0)
-    details["email_verify_risk"] = emailVerify_risk
-
-    #------------------------------------------ Language Analysis and weightage section --------------------------------------#
-
-    langAnalysis_dict: Dict[str, float] = {}
-    langAnalysis_total_percentage = 0.0
-
+    #get feature tunction results
     body_exists = bool(email.text and email.text.strip())
-    if body_exists:
-        total_weightage = 100.0
-        matrix = init_keyword_matrix()
+    if is_offline:
+        url_score, url_result = 0, None
+    else:
+        url_score,url_result = get_urlCheck_scores(email)
+    doc_score, doc_result = get_docChecking_scores(email)
+    email_score,email_result = get_emailVerify_scores(email)
+    matrix = init_keyword_matrix()
+    langauge_result = email_language_risk(email=email,matrix=matrix) if body_exists else None 
 
-        langAnalysis_dict = email_language_risk(
-            email=email,
-            matrix=matrix,
-            total_weightage=total_weightage,
-            base_confidence_score=100
-        ) or {}
-
-        base_total = sum(float(v) for v in langAnalysis_dict.values())
-
+    if langauge_result:
+        base_total = sum(float(v) for v in langauge_result.values())
         flags = 0
-        for v in langAnalysis_dict.values():
-            if float(v) * 2 > (total_weightage / 4):
+        for v in langauge_result.values():
+            if float(v) * 2 > (100 / 4):
                 flags += 1
 
         bonus = 0.0
         if flags >= 2:
-            bonus = (total_weightage / 4) * flags
+            bonus = (100 / 4) * flags
 
-        langAnalysis_total_percentage = base_total + bonus
+        language_score = base_total + bonus
 
-    details["language_raw"] = langAnalysis_dict
-    details["language_percentage"] = langAnalysis_total_percentage
-
-    # -------------------------------- Final Weighted Score -------------------------------- #
-
+    #get weights
     attachment_weight = 0.0
     url_weight = 0.0
     email_weight = 0.35
@@ -364,14 +313,14 @@ def scoringSystem(email: Email, pass_threshold: float = 0.35):
         language_weight = 0.0
         attachment_weight = 1.0
         url_weight = 0.0
-    elif attachment_Flag and url_Flag:
+    elif doc_result and url_result:
         url_weight = 0.25
         attachment_weight = 0.25
-    elif attachment_Flag:
+    elif doc_result:
         attachment_weight = 0.25
         email_weight += 0.05
         language_weight += 0.20
-    elif url_Flag:
+    elif url_result:
         url_weight = 0.25
         email_weight += 0.05
         language_weight += 0.20
@@ -379,8 +328,7 @@ def scoringSystem(email: Email, pass_threshold: float = 0.35):
         email_weight = 0.55
         language_weight = 0.45
         url_weight = 0.0
-        attachment_weight = 0.0
-
+            
     wsum = email_weight + language_weight + url_weight + attachment_weight
     if wsum > 0 and abs(wsum - 1.0) > 1e-9:
         email_weight /= wsum
@@ -388,56 +336,33 @@ def scoringSystem(email: Email, pass_threshold: float = 0.35):
         url_weight /= wsum
         attachment_weight /= wsum
 
-    details["weights"] = {
-        "language_weight": language_weight,
-        "email_weight": email_weight,
-        "url_weight": url_weight,
-        "attachment_weight": attachment_weight,
-    }
-
-    # Threshold boosting: boost the strongest contributor if it clears pass_threshold
-    contributions = {
-        "language": (langAnalysis_total_percentage / 100.0) * language_weight if body_exists else 0.0,
-        "email_verify": (emailVerify_risk / 100.0) * email_weight if body_exists else 0.0,
-        "url": (urlPercentage_result / 100.0) * url_weight if url_Flag else 0.0,
-        "doc": (docPercentage_result / 100.0) * attachment_weight if attachment_Flag else 0.0,
-    }
-    details["contributions_preboost"] = contributions
-
-    max_key = max(contributions, key=contributions.get)
-    if contributions[max_key] >= pass_threshold:
-        if max_key == "doc":
-            docPercentage_result = 100.0
-            language_weight = 1
-        elif max_key == "url":
-            urlPercentage_result = 100.0
-            url_weight = 1
-        elif max_key == "email_verify":
-            emailVerify_risk = 100.0
-            email_weight = 1
-        elif max_key == "language":
-            langAnalysis_total_percentage = 100.0
-            language_weight = 1
+    if language_score/100 > pass_threshold:
+        language_score = 100
+    if url_score/100 > pass_threshold:
+        url_score = 100
+    if email_score/100 > pass_threshold:
+        email_score = 100
+    if doc_score/100 > pass_threshold:
+        doc_score = 100
 
     final_score = (
-        langAnalysis_total_percentage * language_weight +
-        emailVerify_risk * email_weight+
-        urlPercentage_result * url_weight +
-        docPercentage_result * attachment_weight
+        language_score * language_weight +
+        email_score * email_weight +
+        url_score * url_weight +
+        doc_score * attachment_weight
     )
-
-    details["final_score"] = final_score
-
-    return (
-        docPercentage_result,
-        urlPercentage_result,
-        emailVerify_risk,
-        langAnalysis_total_percentage,
-        attachment_Flag,
-        url_Flag,
-        final_score,
-        details
-    )
+    output = {
+        "email_result":email_result,
+        "url_result":url_result,
+        "doc_result":doc_result,
+        'langauge_result':langauge_result,
+        "email_score":email_score,
+        "url_score":url_score,
+        "doc_score":doc_score,
+        "language_score":language_score,
+        "final_score": final_score
+    }
+    return output
 
 if __name__ == "__main__":
     batch_scan_eml_folder("Resources/TESTCASES")

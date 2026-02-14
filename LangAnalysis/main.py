@@ -266,7 +266,7 @@ def email_language_risk(
     body: Optional[str] = None,
     title: Optional[str] = None,
     matrix: Optional[Dict[str, Dict[str, float]]] = None,
-    total_weightage: int = 40,base_confidence_score: int = 100
+    total_weightage: int = 100,base_confidence_score: int = 100
 ) -> Dict[str, float]:
     #Calculate per-flag language risk scores for an email.
 
