@@ -355,15 +355,18 @@ def scoringSystem(email: Email):
     details["language_percentage"] = langAnalysis_total_percentage
 
     # -------------------------------- Final Weighted Score -------------------------------- #
-
     body_exists = bool(email.text and email.text.strip())
 
     final_score = 0
-    attachment_weight = 0
+    attachment_weight = 0 
     email_weight = 0.35
-    language_weight = 0.15
+    language_weight = 0.15 
     url_weight = 0
-    if attachment_Flag and url_Flag:
+    if not body_exists:
+        email_weight = 0
+        language_weight = 0
+        attachment_weight = 1
+    elif attachment_Flag and url_Flag:
         url_weight = 0.25
         attachment_weight = 0.25
     elif attachment_Flag:
@@ -378,7 +381,7 @@ def scoringSystem(email: Email):
         email_weight += 0.15
         language_weight += 0.3
 
-    pass_threshold = 0.5
+    pass_threshold = 0.35
     if docPercentage_result >= (attachment_weight * pass_threshold):
         docPercentage_result = 100
     elif urlPercentage_result >= (url_weight * pass_threshold):
