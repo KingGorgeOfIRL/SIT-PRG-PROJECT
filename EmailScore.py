@@ -408,16 +408,20 @@ def scoringSystem(email: Email, pass_threshold: float = 0.35):
     if contributions[max_key] >= pass_threshold:
         if max_key == "doc":
             docPercentage_result = 100.0
+            language_weight = 1
         elif max_key == "url":
             urlPercentage_result = 100.0
+            url_weight = 1
         elif max_key == "email_verify":
             emailVerify_risk = 100.0
+            email_weight = 1
         elif max_key == "language":
             langAnalysis_total_percentage = 100.0
+            language_weight = 1
 
     final_score = (
         langAnalysis_total_percentage * language_weight +
-        emailVerify_risk * email_weight +
+        emailVerify_risk +
         urlPercentage_result * url_weight +
         docPercentage_result * attachment_weight
     )
