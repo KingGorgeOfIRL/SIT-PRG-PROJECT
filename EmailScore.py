@@ -308,12 +308,7 @@ def scoringSystem(email:Email, pass_threshold:float = 0.35,is_offline:bool =True
     email_weight = 0.35
     language_weight = 0.15
 
-    if not body_exists:
-        email_weight = 0.55
-        language_weight = 0.0
-        attachment_weight = 0.45
-        url_weight = 0.0
-    elif doc_result and url_result:
+    if doc_result and url_result:
         url_weight = 0.25
         attachment_weight = 0.25
     elif doc_result:
@@ -328,7 +323,18 @@ def scoringSystem(email:Email, pass_threshold:float = 0.35,is_offline:bool =True
         email_weight = 0.55
         language_weight = 0.45
         url_weight = 0.0
-            
+    
+    if not body_exists:
+        num_weights = 0
+        if url_weight:
+            num_weights += 1
+        if attachment_weight:
+            num_weights += 1
+        email_weight += language_weight/num_weights
+        url_weight += language_weight/num_weights
+        attachment_weight += language_weight/num_weights
+
+
     wsum = email_weight + language_weight + url_weight + attachment_weight
     if wsum > 0 and abs(wsum - 1.0) > 1e-9:
         email_weight /= wsum
