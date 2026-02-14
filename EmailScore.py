@@ -145,7 +145,7 @@ def batch_scan_eml_folder(folder_path: str):
 
 def get_docChecking_scores(email: Email):
     # Gets the email path from an email object from the Email class
-    if email.attachment_output_path:
+    if email.attachment_header:
         checker = DocCheck(email.email_path)
     else:
         return 0, {}
