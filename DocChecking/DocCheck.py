@@ -49,7 +49,8 @@ class DocCheck(Email):
 
         # track which checks triggered per file (for explainability)
         self.triggered_checks:{str: [str]} = {file_name: [] for file_name in self.files}
-
+        
+        self.file_score = 0
     # internet check
     def __internet_check(self):
         """
