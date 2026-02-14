@@ -359,28 +359,29 @@ def scoringSystem(email: Email):
     body_exists = bool(email.text and email.text.strip())
     attachment_only = attachment_Flag and not body_exists and not url_Flag
 
-    final_score = 0.0
+    final_score = 0
     attachment_weight = 0
-    email_weight = 0
-    language_weight = 0
+    email_weight = 0.35
+    language_weight = 0.15
     url_weight = 0
-    if attachment_only:
-        attachment_weight = 0.7
-        email_weight = 0.3
-    elif not attachment_Flag and not url_Flag:
-        language_weight = 0.45
-        email_weight = 0.3
-    elif not attachment_Flag and url_Flag:
-        language_weight = 0.35
-        email_weight = 0.4
-        url_weight = 0.25
-    elif attachment_weight and url_weight:
-        language_weight = 0.15
-        email_weight = 0.35
+
+    if attachment_weight and url_weight:
         url_weight = 0.25
         attachment_weight = 0.25
+    elif attachment_weight:
+        attachment_weight = 0.25
+        email_weight += 0.05
+        language_weight += 0.2
+    elif url_weight:
+        url_weight = 0.25
+        email_weight += 0.05
+        language_weight += 0.2
+    else:
+        email_weight += 0.15
+        language_weight += 0.3
 
-    pass_threshold = 0.5
+
+    pass_threshold = 0.75
     if docPercentage_result >= (attachment_weight * pass_threshold):
         docPercentage_result = 100
     elif urlPercentage_result >= (url_weight * pass_threshold):
