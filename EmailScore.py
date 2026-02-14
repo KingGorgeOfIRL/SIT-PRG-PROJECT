@@ -332,20 +332,24 @@ def scoringSystem(email: Email):
     }
 
     # This if else statement checks if the email is empty, doesn't have any text
+    langAnalysis_total_percentage = 0.0
     if email.text and email.text.strip():
-
+        total_weightage = 100
         matrix = init_keyword_matrix()
         langAnalysis_dict = email_language_risk(email=email, 
                                                 matrix=matrix, 
-                                                total_weightage = 100, 
+                                                total_weightage = total_weightage, 
                                                 base_confidence_score=100
                                                 )
 
         langAnalysis_total_percentage = sum(langAnalysis_dict.values())
-    
-    else:
-        langAnalysis_total_percentage = 0.0
-
+        flags = 0
+        for flag in langAnalysis_dict:
+            if langAnalysis_dict[flag] * 2 > (total_weightage/4): 
+                flags += 1
+            langAnalysis_total_percentage += langAnalysis_dict[flag]
+        if flags >= 2:
+            langAnalysis_total_percentage += (total_weightage/4) * flags
 
     details["language_raw"] = langAnalysis_dict
     details["language_percentage"] = langAnalysis_total_percentage
