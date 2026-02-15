@@ -14,36 +14,6 @@ from EmailVerify.main import Email
 
 from LangAnalysis.email_extract import *
 
-def write_log_file(filename, final_score, level, details):
-    log_folder = "Finished Email Scans"
-    os.makedirs(log_folder, exist_ok=True)
-
-    base_name = os.path.splitext(os.path.basename(filename))[0]
-    log_file_path = os.path.join(log_folder, f"{base_name}.txt")
-
-    with open(log_file_path, "w", encoding="utf-8") as f:
-        f.write(f"File: {filename}\n")
-        f.write(f"Final Risk: {final_score}\n")
-        f.write(f"Level: {level}\n")
-        f.write("=" * 60 + "\n\n")
-
-        for key, value in details.items():
-            f.write(f"[{key}]\n")
-
-            if isinstance(value, dict):
-                for k, v in value.items():
-                    f.write(f"  {k}: {v}\n")
-
-            elif isinstance(value, list):
-                for item in value:
-                    f.write(f"  - {item}\n")
-
-            else:
-                f.write(f"  {value}\n")
-
-            f.write("\n")
-
-    return log_file_path
 
 class EmailScannerGUI(tk.Tk):
     def __init__(self):
@@ -73,6 +43,7 @@ class EmailScannerGUI(tk.Tk):
         self.create_widgets()
 
     def create_widgets(self):
+
         # Top controls
         top_frame = tk.Frame(self)
         top_frame.pack(fill="x", padx=10, pady=5)
@@ -138,8 +109,12 @@ class EmailScannerGUI(tk.Tk):
         # Table
         columns = ("file", "sender", "subject", "risk", "level")
 
+        # Create frame to hold tree + scrollbar
+        table_frame = tk.Frame(self)
+        table_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
         self.tree = ttk.Treeview(
-            self,
+            table_frame,
             columns=columns,
             show="headings",
             height=18
@@ -147,19 +122,33 @@ class EmailScannerGUI(tk.Tk):
 
         self.tree.bind("<Double-1>", self.open_email_details)
 
+        # Column headings (KEEP THESE)
         self.tree.heading("file", text="File")
         self.tree.heading("sender", text="Sender")
         self.tree.heading("subject", text="Subject")
         self.tree.heading("risk", text="Risk %")
         self.tree.heading("level", text="Risk Level")
 
+        # Column sizes (KEEP THESE)
         self.tree.column("file", width=180)
         self.tree.column("sender", width=200)
         self.tree.column("subject", width=260)
         self.tree.column("risk", width=80, anchor="center")
         self.tree.column("level", width=120, anchor="center")
 
-        self.tree.pack(fill="both", expand=True, padx=10, pady=10)
+        # Create vertical scrollbar
+        tree_scrollbar = ttk.Scrollbar(
+            table_frame,
+            orient="vertical",
+            command=self.tree.yview
+        )
+
+        # Connect scrollbar to tree
+        self.tree.configure(yscrollcommand=tree_scrollbar.set)
+
+        # Layout inside frame
+        self.tree.pack(side="left", fill="both", expand=True)
+        tree_scrollbar.pack(side="right", fill="y")
 
         # Chart Display Frame
         self.chart_frame = tk.LabelFrame(self, text="Risk Distribution")
@@ -202,6 +191,44 @@ class EmailScannerGUI(tk.Tk):
         self.loading_label.pack(pady=10)
         self.progress.pack(pady=5)
         self.progress_text.pack()
+
+    #---------------------------------------- gets variables from scoringSystem --------------------------------------------#
+    def run_email_scoring(self, eml_file_path):
+        """
+        Creates Email object, runs scoringSystem,
+        and returns structured result safely.
+        """
+        try:
+            email = Email(eml_file_path)
+
+            result = scoringSystem(email)
+
+            final_score = result["final_score"]
+            level, tag = self.risk_level(final_score)
+
+            return {
+                "email": email,
+                "email_result": result.get("email_result"),
+                "url_result": result.get("url_result"),
+                "doc_result": result.get("doc_result"),
+                "language_result": result.get("language_result"),
+                "email_score": result.get("email_score", 0),
+                "url_score": result.get("url_score", 0),
+                "doc_score": result.get("doc_score", 0),
+                "language_score": result.get("language_score", 0),
+                "final_score": final_score,
+                "level": level,
+                "tag": tag,
+                "attachment_flag": bool(result.get("doc_result")),
+                "url_flag": bool(result.get("url_result")),
+                "details": result
+            }
+            
+
+        except Exception as e:
+            print(f"Error scoring {eml_file_path}: {e}")
+            return None
+
 
     #---------------------------------------- Scanning folder --------------------------------------------#
 
@@ -289,32 +316,26 @@ class EmailScannerGUI(tk.Tk):
             eml_file_path = self.ensure_eml(file_path)
 
             try:
-                email = Email(eml_file_path)
+                result = self.run_email_scoring(eml_file_path)
 
-                (
-                    doc_score,
-                    url_score,
-                    email_score,
-                    lang_score,
-                    attachment_flag,
-                    url_flag,
-                    final_score,
-                    details
-                ) = scoringSystem(email)
+                if result:
+                    self.after(
+                        0,
+                        self.add_result_row,
+                        filename,
+                        result["email"],
+                        result["final_score"],
+                        result["level"],
+                        result["tag"],
+                        result["details"],
+                        result["doc_score"],
+                        result["url_score"],
+                        result["email_score"],
+                        result["language_score"],
+                        result["attachment_flag"],
+                        result["url_flag"]
+                    )
 
-
-                level, tag = self.risk_level(final_score)
-
-                self.after(
-                    0,
-                    self.add_result_row,
-                    filename,
-                    email,
-                    final_score,
-                    level,
-                    tag,
-                    details
-                )
 
             except Exception as e:
                 print(f"Error scanning {filename}: {e}")
@@ -338,6 +359,7 @@ class EmailScannerGUI(tk.Tk):
             self.temp_eml_files.clear()
 
         
+
     def scan_folder_wrapper(self):
         try:
             self.scan_folder()
@@ -376,6 +398,7 @@ class EmailScannerGUI(tk.Tk):
 
     def scan_single_worker(self, file_path):
 
+        
         # Track temporary .eml files
         temp_files = []
 
@@ -385,31 +408,26 @@ class EmailScannerGUI(tk.Tk):
             if eml_file != file_path:
                 temp_files.append(eml_file)
 
-            email = Email(eml_file)
+            result = self.run_email_scoring(eml_file)
 
-            (
-                doc_score,
-                url_score,
-                email_score,
-                lang_score,
-                attachment_flag,
-                url_flag,
-                final_score,
-                details
-            ) = scoringSystem(email)
+            if result:
+                self.after(
+                    0,
+                    self.add_result_row,
+                    os.path.basename(file_path),
+                    result["email"],
+                    result["final_score"],
+                    result["level"],
+                    result["tag"],
+                    result["details"],
+                    result["doc_score"],
+                    result["url_score"],
+                    result["email_score"],
+                    result["language_score"],
+                    result["attachment_flag"],
+                    result["url_flag"]
+                )
 
-            level, tag = self.risk_level(final_score)
-
-            self.after(
-                0,
-                self.add_result_row,
-                os.path.basename(file_path),
-                email,
-                final_score,
-                level,
-                tag,
-                details
-            )
 
         except Exception as e:
             print(f"Error scanning {file_path}: {e}")
@@ -424,6 +442,8 @@ class EmailScannerGUI(tk.Tk):
                 os.remove(temp_file)
             except Exception as e:
                 print(f"Failed to delete temp file {temp_file}: {e}")
+
+
 
     def open_email_details(self, event):
         selected = self.tree.selection()
@@ -492,6 +512,7 @@ class EmailScannerGUI(tk.Tk):
         else:
             print("Log file not found.")
 
+
     def show_loading(self, total):
 
         self.total_emails = total
@@ -521,20 +542,21 @@ class EmailScannerGUI(tk.Tk):
         if self.total_emails > 0:
             self.chart_button.config(state="normal")
 
+
     def update_progress(self):
         self.progress["value"] = self.processed_emails
         self.progress_text.config(
             text=f"{self.processed_emails} / {self.total_emails}"
         )
 
-    def add_result_row(self, filename, email, score, level, tag, details):
+
+    def add_result_row(self, filename, email, score, level, tag, details, doc_score, url_score, email_score, language_score, attachment_flag, url_flag):
         
         # --- Write log file for this email ---
-        log_path = write_log_file(
+        log_path = self.write_log_file(
             filename=filename,
-            final_score=f"{score:.2f}%",
-            level=level,
-            details=details
+            #Passes the whole score dictionary
+            result=details
         )
         
         item_id = self.tree.insert(
@@ -569,6 +591,66 @@ class EmailScannerGUI(tk.Tk):
         elif level == "High":
             self.high_count += 1
 
+
+
+    def write_log_file(self, filename, result):
+        log_folder = "Finished Email Scans"
+        os.makedirs(log_folder, exist_ok=True)
+
+        base_name = os.path.splitext(os.path.basename(filename))[0]
+        log_file_path = os.path.join(log_folder, f"{base_name}.txt")
+
+        with open(log_file_path, "w", encoding="utf-8") as f:
+
+            f.write("Email Scan Report\n")
+            f.write("=" * 60 + "\n\n")
+
+            # --- Final Score ---
+            f.write(f"Final Risk Score: {result.get('final_score', 0):.2f}%\n\n")
+
+            # --- Component Scores ---
+            f.write("Component Scores\n")
+            f.write("-" * 60 + "\n")
+            f.write(f"Language Score: {result.get('language_score', 0):.2f}%\n")
+            f.write(f"Email Verify Score: {result.get('email_score', 0):.2f}%\n")
+            f.write(f"URL Score: {result.get('url_score', 0):.2f}%\n")
+            f.write(f"Attachment Score: {result.get('doc_score', 0):.2f}%\n\n")
+
+            # --- Flags ---
+            f.write("Flags\n")
+            f.write("-" * 60 + "\n")
+            f.write(f"URL Triggered: {bool(result.get('url_result'))}\n")
+            f.write(f"Attachment Triggered: {bool(result.get('doc_result'))}\n\n")
+
+            # --- Detailed Results ---
+            f.write("Detailed Results\n")
+            f.write("-" * 60 + "\n\n")
+
+            for section in ["language_result", "email_result", "url_result", "doc_result"]:
+                section_data = result.get(section)
+
+                if not section_data:
+                    continue
+
+                f.write(f"[{section}]\n")
+
+                if isinstance(section_data, dict):
+                    for key, value in section_data.items():
+                        f.write(f"  {key}: {value}\n")
+
+                elif isinstance(section_data, list):
+                    for item in section_data:
+                        f.write(f"  - {item}\n")
+
+                else:
+                    f.write(f"  {section_data}\n")
+
+                f.write("\n")
+
+        return log_file_path
+
+
+
     def clear_logs(self):
         log_folder = "Finished Email Scans"
 
@@ -600,6 +682,7 @@ class EmailScannerGUI(tk.Tk):
             "Logs Cleared",
             f"Deleted {deleted_count} log file(s)."
         )
+
 
     def show_pie_chart(self):
         total = self.low_count + self.medium_count + self.high_count
@@ -683,9 +766,9 @@ class EmailScannerGUI(tk.Tk):
 
     @staticmethod
     def risk_level(score):
-        if score < 20:
+        if score < 30:
             return "Low", "low"
-        elif score < 60:
+        elif score < 50:
             return "Medium", "medium"
         else:
             return "High", "high"
