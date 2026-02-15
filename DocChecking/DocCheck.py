@@ -45,10 +45,11 @@ class DocCheck(Email):
         self.metadata_date:{str: {str: int}} = self.__date_extraction()
 
         # initialize risk score per file
-        self.file_score:{str: int} = {file_name: 0 for file_name in self.files} or None
+        self.file_score:{str: int} = {file_name: 0 for file_name in self.files}
 
         # track which checks triggered per file (for explainability)
         self.triggered_checks:{str: [str]} = {file_name: [] for file_name in self.files}
+
     # internet check
     def __internet_check(self):
         """
@@ -335,8 +336,7 @@ class DocCheck(Email):
         self.archive_check()
 
         if self.connectivity == True:
-            #self.virus_total()
-            pass
+            self.virus_total()
 
         max_score = sum(self.RISK_WEIGHTS.values())
 
@@ -369,6 +369,6 @@ def risk_score_calculate(max_score: int, file_risk_scores: dict, connectivity: b
     return final_file_score, triggered_checks, ranked_files
 
 
-# checker = DocCheck("Resources/DATASET/DocCheck3.eml")
-# max_score, file_score, internet_connection, triggered_checks = checker.run_all_checks()
-# risk_score_calculate(max_score, file_score, internet_connection, triggered_checks)
+checker = DocCheck("Resources/DATASET/DocCheck3.eml")
+max_score, file_score, internet_connection, triggered_checks = checker.run_all_checks()
+risk_score_calculate(max_score, file_score, internet_connection, triggered_checks)
