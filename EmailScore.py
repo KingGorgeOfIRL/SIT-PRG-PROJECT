@@ -280,7 +280,7 @@ def _extract_numeric_scores(obj: Any) -> List[float]:
 
 
 
-def scoringSystem(email: Email, pass_threshold: float = 0.08, is_offline: bool = True) -> Dict[str, Any]:
+def scoringSystem(email: Email, pass_threshold: float = 1, is_offline: bool = True) -> Dict[str, Any]:
     def cap100(x: Any) -> float:
         """Clamp numeric-ish to [0, 100]. Non-numeric -> 0."""
         try:
@@ -293,12 +293,14 @@ def scoringSystem(email: Email, pass_threshold: float = 0.08, is_offline: bool =
             return 100.0
         return v
 
+
     # -------------------- Get feature function results -------------------- #
     body_exists = bool(getattr(email, "text", None) and email.text.strip())
 
     # URL
     if is_offline:
         url_score, url_result = 0.0, None
+        pass_threshold = 0.08
     else:
         # Expected: (score, result)
         url_score, url_result = get_urlCheck_scores(email)
