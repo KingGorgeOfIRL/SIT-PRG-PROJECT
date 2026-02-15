@@ -53,7 +53,7 @@ class UrlCheck(Email):
             s.close()
             return True
         except Exception as e:
-            print(f"Internet Checking Exception: {e}")
+            print(e)
             return False   
     
     # split url into: scheme, path, domain, & port
@@ -253,6 +253,8 @@ class UrlCheck(Email):
         if self.connectivity == True:
             return False
 
+        # https://hackmd.io/@ladieubong2004/SyGfnIWbbe
+        # https://scnps.co/papers/ndss25_open_redirects.pdf (or can use this :0)
         wordlist = self.extract_wordlist('common_redirection_parameters.txt')
 
         # look for common redirection parameters in path
@@ -364,12 +366,12 @@ class UrlCheck(Email):
             try:
                 # try root domain first
                 rdap_url = f"https://rdap.org/domain/{root_domain}"
-                rdap_output = get(rdap_url, timeout = 10)
+                rdap_output = get(rdap_url, timeout = (2, 3))
 
                 # if root domain does not work, try subdomain
                 if rdap_output.status_code != 200 and subdomain != None:
                     rdap_url = f"https://rdap.org/domain/{subdomain}"
-                    rdap_output = get(rdap_url, timeout = 10)
+                    rdap_output = get(rdap_url, timeout = (2, 3))
 
                 # get domain data
                 data = rdap_output.json()
@@ -386,12 +388,13 @@ class UrlCheck(Email):
                 now = datetime.datetime.now(datetime.timezone.utc)
                 age = now - registered_at
 
+                # https://dnsrf.org/blog/phishing-attacks--newly-registered-domains-still-a-prominent-threat
                 if age.days <= 4:
                     self.__apply_check("domain_age_check", url)
 
             # website does not exist
             except Exception as e:
-                print(f"Domain Age Check: RDAP failed for {domain} - {e}")
+                print(f"RDAP failed for {domain}: {e}")
                 continue
         
         return True
@@ -433,7 +436,7 @@ class UrlCheck(Email):
                         self.__apply_risk_score("virus_total", url, 50)
 
             except Exception as e:
-                print(f"Virus Total Exception: {e}")
+                print(e)
                 continue
 
         return True
@@ -503,8 +506,3 @@ def risk_score_calculate(connectivity:bool, triggered_checks:dict):
     ranked_url = sorted(final_url_score.items(), key=lambda x: x[1], reverse=True)
 
     return ranked_url, triggered_checks
-
-
-u = UrlCheck("Resources/DATASET/URL Checker_3.eml")
-internet_connection, triggered_checks = u.run_all_checks()
-risk_score_calculate(internet_connection, triggered_checks)
