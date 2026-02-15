@@ -245,10 +245,6 @@ class Email:
 
         return output_path
     
-    # Sample testing below
-    # new_file = convert_to_eml("Resources/RAWEML/01004.f3ce5cdf52dbe7ed22354f1ab95376d6")
-    # print("Created:", new_file)
-
     
     def __repr__(self):
         return f"Email<Subject:{self.subject},Sender:{self.sender}>"
