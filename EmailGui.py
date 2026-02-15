@@ -122,14 +122,14 @@ class EmailScannerGUI(tk.Tk):
 
         self.tree.bind("<Double-1>", self.open_email_details)
 
-        # Column headings (KEEP THESE)
+        # Column headings
         self.tree.heading("file", text="File")
         self.tree.heading("sender", text="Sender")
         self.tree.heading("subject", text="Subject")
         self.tree.heading("risk", text="Risk %")
         self.tree.heading("level", text="Risk Level")
 
-        # Column sizes (KEEP THESE)
+        # Column sizes
         self.tree.column("file", width=180)
         self.tree.column("sender", width=200)
         self.tree.column("subject", width=260)

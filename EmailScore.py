@@ -140,8 +140,10 @@ def batch_scan_eml_folder(folder_path: str):
         print(f"Subject: {email.subject}")
         print(f"Final Risk Score: {final_score:.2f}%")
 
-
+    # This line prints when using CLI
     print("\nBatch scan complete")
+
+#----------------------------------------------Grabbing scores and functions seciton------------------------------------------------------#
 
 def get_docChecking_scores(email: Email):
     # Gets the email path from an email object from the Email class
@@ -172,8 +174,6 @@ def get_docChecking_scores(email: Email):
     
 
 def get_urlCheck_scores(email: Email):
-    # If score is higher than 100 (Maximum score for URLchecking is around 190), flag it as suspicious
-    # Note that self.urls.append() is used to add URLs to self.urls, if self.urls is empty self.url_score stays empty and there will be no loop
 
     # Initialize UrlCheck object
     url_checker = UrlCheck(email.email_path)
@@ -216,8 +216,6 @@ def get_urlCheck_scores(email: Email):
 
 
 def get_emailVerify_scores(email: Email):
-    # edit_distance() is used for detecting sus typos like g00gle.com instead of google.com (Levenshtein edit distance)
-    # To use the EmailVerifier class you need to give normalize_domain() an EmailVerifier object, not a string
     verifier = EmailVerifier(email)
     
     result = verifier.run_verification()
@@ -225,7 +223,7 @@ def get_emailVerify_scores(email: Email):
     return email_score,result
     
 
-################################################################################################################
+#----------------------------------------------End of grabbing scores and functions seciton------------------------------------------------------#
 
 def is_offline():
     return socket.socket == block_internet
